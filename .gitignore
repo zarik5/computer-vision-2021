@@ -15,3 +15,7 @@ build
 *.png
 *.jpeg
 *.jpg
+*.pdf
+*.aux
+*.log
+*.synctex.gz
