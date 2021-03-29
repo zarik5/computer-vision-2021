@@ -12,6 +12,6 @@ _deps
 
 data
 build
-.png
-.jpeg
-.jpg
+*.png
+*.jpeg
+*.jpg
