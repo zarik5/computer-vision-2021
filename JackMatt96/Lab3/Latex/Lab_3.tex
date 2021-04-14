@@ -1,0 +1,167 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{graphicx}
+\usepackage{multicol, latexsym, amsmath, amssymb}
+\usepackage{blindtext}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{tabu}
+\usepackage{booktabs}% for better rules in the table
+\usepackage{anysize} % Soporte para el comando \marginsize
+\usepackage{hyperref}
+\setlength\parindent{0pt}
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\cc}{\fontfamily{txtt}\selectfont}
+
+\begin{document}
+\begin{center}
+\begin{tabular}{c}
+\LARGE{Lab 3}\\
+\large{Mattia Giacomello}\\
+I.D. 1210988
+\end{tabular}
+\end{center}
+
+\section{Goal}
+The objective of this homework is show the difference in histogram equalization applied in different color space and the implementation of three filters seen during class through a system of classes and their effect varying the parameters.
+
+\section{Procedure}
+The two color spaces considered are the BGR and the HSV color space. \newline 
+For the first, the object {\cc Mat} containing the image is divided in a {\cc vector} containing the three channels and the histogram equalization is computed on each element separately.
+In the second case, after the conversion from BGR to HSV and the division in three channels, the histograms equalization is computed only on the V channel.
+This choice is made considering that the first channel, the Hue, is a value that define the color so every change in this channel will change completely the image.
+Between the 2 remaining values the Value channel can be considered as a weight that identifies the intensity of the pixel, from dark to bright. \newline
+The BGR histograms and the relative images are shown in sequence to show the differences at interval of three seconds.\newline
+At first sight is clearly visible the first method changes the color of pixels.
+This makes the images with warm tint more cold, since it push the histogram of blue channel that is condensed in the low values more high, making the opposite in the red channel histogram.
+The same phenomena is given with cold tint which are made warmer as in the figure (\ref{fig:HistEq}).
+In the same figure we can observe that the image V equalized keeps the base color but change the brightness of the pixel.
+In this way an overexposed image is less burnt and an image with warm tint has the same tint but with a more balanced brightness distribution.
+\newline
+At this point the V equalized image is filtered through three filters: Median, Gaussian and Bilateral filter.
+To implement these filters are created four class, one for each filter and a generic {\cc Filter} class from which the other are derived.
+This implementation makes managing the various filters simple.\newline
+The effects of the Median filter is noticeable in noisy images, since it removes pixels with high sudden changes.
+We can observe that figure (\ref{fig:mednoise}) shows how the noise is less noticeable loosing a bit of quality.
+Increasing the size the image became more blured, removing small details, till the elements became blobs of quasi constant color and difficult to distinguish.\newline
+The Gaussian filter effect is more obvious: increasing the value of sigma and the window size the output image results more blured and the fine details are unrecognizable.
+This helps to remove some noise and smooth squared colored areas obtained from the equalization.
+If $\sigma$ is fixed and the size is low the effect is similar to a mean filter, since the values of kernel are quasi constant, while if the window exceed the 6$\sigma$ rule there are unnoticeable changes, since the kernel in the exceeding area is almost 0.\newline
+For the Bilateral filter, to simplify the test, the size of filter is fixed to $6\sigma_{S}$.
+The effect of this filter is lighter than the others and only for high parameter's values it's sensible its effect.
+In particular it can remove small detail, for example the noise, maintaining the structure of most elements.
+If we use a too small $\sigma_c$, even using a large $\sigma_s$, it is not so useful since the colors are still off in some pixels.
+Choosing a good tradeoff is possible to observe that the example image is less grainy, maintaining recognizable the subject.
+If the values are too high the image assume a cartoonish look as can be seen in figure (\ref{fig:cartoon}).
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{\textwidth}
+\begin{minipage}{0.4\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/lena.jpg}
+\end{minipage}%
+\begin{minipage}{0.6\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/overexposed.jpg}
+\end{minipage}
+\subcaption{Original Images}
+\end{minipage}\\
+\begin{minipage}{\textwidth}
+\begin{minipage}{0.4\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Lena_BGR_Equalized.jpg}
+\end{minipage}%
+\begin{minipage}{0.6\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Overexposed_BGR_Equalized.jpg}
+\end{minipage}
+\subcaption{BGR Equalized}
+\end{minipage}\\
+\begin{minipage}{\textwidth}
+\begin{minipage}{0.4\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Lena_V_Equalized.jpg}
+\end{minipage}%
+\begin{minipage}{0.6\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Overexposed_V_Equalized.jpg}
+\end{minipage}
+\subcaption{V Equalized}
+\end{minipage}
+\caption{Example of histograms equalization on different images} \label{fig:HistEq}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.5\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Meddenoise.jpg}
+\subcaption{Size=5, denoise effcet}\label{fig:mednoise}
+\end{minipage}%
+\begin{minipage}{0.5\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/MedHigh.jpg}
+\subcaption{Size=15, high value}
+\end{minipage}\\
+\begin{center}
+\begin{minipage}{0.5\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Med.jpg}
+\subcaption{Size=60, blob effect}
+  \end{minipage}
+\end{center}
+\caption{Example of Median filter with various size}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.5\textwidth}
+    \centering
+  \includegraphics[width=0.98\textwidth]{Pictures/GausLowSize.jpg}
+  \subcaption{Size=11, low value}
+  \end{minipage}%
+  \begin{minipage}{0.5\textwidth}
+    \centering
+  \includegraphics[width=0.98\textwidth]{Pictures/GausGoodSize.jpg}
+  \subcaption{Size=31$\approx$6$\sigma$, tipical choice}
+  \end{minipage}\\
+  \begin{center}
+  \begin{minipage}{0.5\textwidth}
+    \centering
+  \includegraphics[width=0.98\textwidth]{Pictures/GausLargeSize.jpg}
+  \subcaption{Size=61, large value}
+    \end{minipage}
+  \end{center}
+  \caption{Example of Gaussian filter with $\sigma=5$ and changing size}
+  \end{figure}
+
+  \begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.5\textwidth}
+      \centering
+    \includegraphics[width=0.98\textwidth]{Pictures/Bil50_10.jpg}
+    \subcaption{$\sigma_c$=10, $\sigma_s$=50}
+    \end{minipage}%
+    \begin{minipage}{0.5\textwidth}
+      \centering
+    \includegraphics[width=0.98\textwidth]{Pictures/Bil10_50.jpg}
+    \subcaption{$\sigma_c$=50, $\sigma_s$=10}
+    \end{minipage}\\
+
+\begin{minipage}{0.5\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/Bil3_150.jpg}
+\subcaption{$\sigma_c$=150, $\sigma_s$=3}
+\end{minipage}%
+    \begin{minipage}{0.5\textwidth}
+      \centering
+    \includegraphics[width=0.98\textwidth]{Pictures/BilCartoon.jpg}
+    \subcaption{$\sigma_c$=200, $\sigma_s$=5}\label{fig:cartoon}
+      \end{minipage}
+    \caption{Example with Bilater filter with various parameters}
+    \end{figure} 
+
+\end{document}
