@@ -19,3 +19,4 @@ build
 *.aux
 *.log
 *.synctex.gz
+.vs

@@ -1,16 +1,10 @@
 {
     "configurations": [
         {
-            "name": "wsl ubuntu",
+            "name": "windows",
             "includePath": [
-                "/usr/local/include",
-                "/usr/include",
-                "/usr/include/opencv4"
-            ],
-            "intelliSenseMode": "linux-gcc-x64",
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "gnu17",
-            "cppStandard": "gnu++14"
+                "../opencv/include"
+            ]
         }
     ],
     "version": 4
