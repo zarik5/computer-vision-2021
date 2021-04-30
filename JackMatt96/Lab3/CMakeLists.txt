@@ -6,7 +6,7 @@ find_package(OpenCV REQUIRED)
 
 include_directories(include ${OpenCV_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME} src/main.cpp include/filter.h src/filter.cpp src/show_histogram_function.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp include/filter.h src/filter.cpp)
 
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 

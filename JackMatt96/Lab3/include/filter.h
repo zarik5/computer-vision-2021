@@ -43,34 +43,80 @@ protected:
 
 };
 
+
 // Gaussian Filter
 class GaussianFilter : public Filter  {
 
-// write here your code
+public:
+	// constructor 
+	// input_img: image to be filtered
+	// filter_size : size of the kernel/window of the filter
+	// sigma : standard deviation of gaussian kernel
+	GaussianFilter(cv::Mat input_img, int filter_size, float sigma);
 
-// place constructor
-// re-implement  doFilter()
-// additional parameter: standard deviation (sigma)
+	// Compute the filtered image with gaussian filter
+	void doFilter();
+
+	// Set the sigma
+	// sigma : standard deviation of gaussian kernel
+	void setSigma(float sigma);
+
+	// Return the sigma
+	float getSigma();
+
+private:
+	// standard deviation of gaussian kernel
+	float sigma;
 
 };
 
+
+// Median Filter
 class MedianFilter : public Filter {
 
-// write here your code
-
-// place constructor
-// re-implement  doFilter()
-// no additional parameters
+public:
+	// constructor 
+	// input_img: image to be filtered
+	// filter_size : size of the kernel/window of the filter
+	MedianFilter(cv::Mat input_img, int filter_size);
+	// Compute the filtered image with gaussian filter
+	void doFilter();
 
 };
 
+
+// Bilateral Filter
 class BilateralFilter : public Filter {
 
-// write here your code
+public:
+	// constructor 
+	// input_img: image to be filtered
+	// filter_size : size of the kernel/window of the filter
+	// sigma_range : standard deviation of color range
+	// sigma_space : standard deviation of space
+	BilateralFilter(cv::Mat input_img, int filter_size, float sigma_space, float sigma_range);
 
-// place constructor
-// re-implement  doFilter()
-// additional parameters: sigma_range, sigma_space
+	// Compute the filtered image with gaussian filter
+	void doFilter();
 
+	// Set the sigma range
+	// sigma_range : standard deviation of color range
+	void setSigmaRange(float sigma_range);
+
+	// Return the sigma range
+	float getSigmaRange();
+
+	// Set the sigma space
+	// sigma_space : standard deviation of space
+	void setSigmaSpace(float sigma_space);
+
+	// Return the sigma space
+	float getSigmaSpace();
+
+private:
+	// standard deviation of color range
+	float sigma_range;
+	// standard deviation of space
+	float sigma_space;
 
 };

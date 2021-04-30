@@ -10,8 +10,8 @@
 #include <opencv2/imgproc.hpp>
 
 
-void findChessboardPoints(std::vector< cv::String >, std::vector<std::vector<cv::Vec2f>> , std::vector<cv::Mat> , std::vector< cv::String >);
-void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>>,cv::Size, cv::Size , float ,cv::Mat , cv::Mat ,std::vector <double> ,std::vector <double> );
+void findChessboardPoints(std::vector< cv::String >, std::vector<std::vector<cv::Vec2f>> &, std::vector<cv::Mat> &, std::vector< cv::String >&);
+void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> ,cv::Size , cv::Size , float ,cv::Mat& , cv::Mat& ,std::vector <double>& ,std::vector <double>& );
 std::vector<cv::Vec3f> chessboard3dPoints(cv::Size , float );
 cv::Mat undistortImage(cv::Mat , cv::Mat , cv::Mat );
 
@@ -40,7 +40,7 @@ int main(){
     
 	cv::Mat cameraMatrix, distCoeffs;
 	std::vector <double> meanReprojectionErrors, meanSquaredReprojectionErrors;
-
+	std::cout<<chessboardImagesPoints.size()<<"\n";
 	calibrateCameraChessboard(chessboardImagesPoints, chessboardImages[0].size(),gridSize, gridMeasure, cameraMatrix,  distCoeffs, meanReprojectionErrors, meanSquaredReprojectionErrors);
 
 	int minIdx, maxIdx, minSIdx, maxSIdx;
@@ -83,32 +83,36 @@ int main(){
 
 
 
-void findChessboardPoints(std::vector< cv::String >imagesVectorPath, std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints, std::vector<cv::Mat> chessboardImages, std::vector< cv::String >imagesName){
+
+void findChessboardPoints(std::vector< cv::String >imagesVectorPath, std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints, std::vector<cv::Mat>& chessboardImages, std::vector< cv::String >& imagesName){
 	for(auto imagePath:imagesVectorPath)
     {
         cv::Mat img = cv::imread(imagePath);
 		std::vector<cv::Vec2f> points;
-		if (!img.empty() && cv::findChessboardCorners(img, gridSize, points)) {
-			// Refining of chessboard corner and push in the vector
-			cv::Mat gray;
-			cv::cvtColor(img, gray, cv::COLOR_RGB2GRAY);
-			cv::cornerSubPix(gray, points, cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01));
-			cv::drawChessboardCorners(img, gridSize, points, true);
-			chessboardImagesPoints.push_back(points);
-			chessboardImages.push_back(img);
-            imagesName.push_back(imagePath.substr(imagePath.find_last_of("/")));
+		if(img.empty() || !cv::findChessboardCorners(img, gridSize, points)){
+			continue;
 		}
+		// Refining of chessboard corner and push in the vector
+		cv::Mat gray;
+		cv::cvtColor(img, gray, cv::COLOR_RGB2GRAY);
+		cv::cornerSubPix(gray, points, cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01));
+		cv::drawChessboardCorners(img, gridSize, points, true);
+		chessboardImagesPoints.push_back(points);
+		chessboardImages.push_back(img);
+        imagesName.push_back(imagePath.substr(imagePath.find_last_of("/")+1));
+		std::cout<<imagesName.back()+"\n";
     }
 }
 
 
-void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints,cv::Size imageSize, cv::Size gridSize, float gridMeasure,cv::Mat cameraMatrix, cv::Mat distCoeffs,std::vector <double> meanReprojectionErrors,std::vector <double> meanSquaredReprojectionErrors){
-	
+void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints,cv::Size imageSize, cv::Size gridSize, float gridMeasure,cv::Mat &cameraMatrix, cv::Mat &distCoeffs,std::vector <double>& meanReprojectionErrors,std::vector <double>& meanSquaredReprojectionErrors){  
 	std::vector<cv::Vec3f> chessboard = chessboard3dPoints(gridSize,gridMeasure);
-	// Computation of camera intrinsic and extrinsic parameters and lens coefficients
-	
+
+	// Computation of camera intrinsic and extrinsic parameters and lens coefficients	
 	std::vector <cv::Mat> rvecs, tvecs;
+	std::cout<<"Parto\n";     
 	cv::calibrateCamera(std::vector<std::vector<cv::Vec3f>> (chessboardImagesPoints.size(),chessboard), chessboardImagesPoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs);
+	std::cout<<"Arrivo\n";     
 
     // Computation of single root mean squared reprojection errors
 	meanReprojectionErrors = std::vector <double> (chessboardImagesPoints.size());
@@ -131,7 +135,8 @@ void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> chessboardIma
 		{
 			error += pow(cv::norm(chessboardReprojected[j]- chessboardImagesPoints[i][j]),2);
 		}
-        meanSquaredReprojectionErrors[i] = error / chessboardImagesPoints[i].size();        
+        meanSquaredReprojectionErrors[i] = error / chessboardImagesPoints[i].size();   
+		std::cout<<i<<"   "<<meanReprojectionErrors[i]<<"   "<<meanSquaredReprojectionErrors[i]<<"\n";     
 	}
 }
 
