@@ -83,19 +83,16 @@ int main()
     cv::createTrackbar("Size", winNameGaus, &initGausSize, maxGausSize, sizeGaussian, &Gaussian);
     cv::createTrackbar("Sigma", winNameGaus, &initGausSigma, maxGausSigma, sigmaGaussian, &Gaussian);
 
-
     // Creation of window and trackbar for median filter 
     MedianFilter Median(imagesUsed[4], initMedSize);
     sizeMedian(initMedSize, &Median);
     cv::createTrackbar("Size", winNameMed, &initMedSize, maxMedSize, sizeMedian, &Median);
-
 
     // Creation of window and trackbar for bilinear filter 
     BilateralFilter Bilateral(imagesUsed[4], initBilSpace * 6, initBilSpace, initBilRange);
     spaceBilateral(initBilSpace, &Bilateral);
     cv::createTrackbar("S. Space", winNameBil, &initBilSpace, maxBilSpace, spaceBilateral, &Bilateral);
     cv::createTrackbar("S. Range", winNameBil, &initBilRange, maxBilRange, rangeBilateral, &Bilateral);
-
 
     cv::waitKey();
     return 0;

@@ -29,8 +29,8 @@ The objective of this homework is show the difference in histogram equalization 
 
 \section{Procedure}
 The two color spaces considered are the BGR and the HSV color space. \newline 
-For the first, the object {\cc Mat} containing the image is divided in a {\cc vector} containing the three channels and the histogram equalization is computed on each element separately.
-In the second case, after the conversion from BGR to HSV and the division in three channels, the histograms equalization is computed only on the V channel.
+For the first, the histogram equalization is computed on each element separately while in the second case the histograms equalization is computed on one channel at time.
+
 This choice is made considering that the first channel, the Hue, is a value that define the color so every change in this channel will change completely the image.
 Between the 2 remaining values the Value channel can be considered as a weight that identifies the intensity of the pixel, from dark to bright. \newline
 The BGR histograms and the relative images are shown in sequence to show the differences at interval of three seconds.\newline

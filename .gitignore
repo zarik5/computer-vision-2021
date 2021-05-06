@@ -18,6 +18,7 @@ build
 *.jpg
 *.pdf
 *.aux
+*.out
 *.log
 *.synctex.gz
 .vs
