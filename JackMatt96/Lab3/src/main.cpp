@@ -13,8 +13,8 @@
 void showHistogram(std::vector<cv::Mat>&);
 cv::Mat equalizeSingleChannel(cv::Mat,int);
 cv::Mat equalizeBGRChannels(cv::Mat);
-std::vector<cv::Mat> calculateHistograms(cv::Mat, int, float* );
-void showImagesAndHistogram(std::vector<cv::Mat> ,std::vector<cv::String> , std::vector<std::vector<cv::Mat>> , std::string ,int );
+std::vector<cv::Mat> calculateHistograms(cv::Mat);
+void showImageAndHistogram(cv::Mat, std::vector<cv::Mat>, std::string);
 
 void sizeGaussian(int, void*);
 void sigmaGaussian(int, void*);
@@ -23,9 +23,6 @@ void rangeBilateral(int, void* );
 void spaceBilateral(int, void* );
 
 
-// Histogram equalization parameters
-const int size = 256;
-float range[] = { 0,255 };
 
 std::string winNameGaus = "Gaussian Filter";
 std::string winNameMed = "Median Filter";
@@ -65,14 +62,16 @@ int main()
     }
 
 
+
     imagesUsed[1] = equalizeBGRChannels(imagesUsed[0]);
+
     imagesUsed[2] = equalizeSingleChannel(imagesUsed[0],0);
     imagesUsed[3] = equalizeSingleChannel(imagesUsed[0],1);
     imagesUsed[4] = equalizeSingleChannel(imagesUsed[0],2);
 
     std::vector<std::vector<cv::Mat>> histogramChannels(5);
     for(int i =0; i<5;i++)
-        histogramChannels[i] = calculateHistograms(imagesUsed[i], size, range);
+        histogramChannels[i] = calculateHistograms(imagesUsed[i]);
 	
     showImagesAndHistogram(imagesUsed,std::vector<cv::String>{"Original","RGB Equalized","H Equalized","S Equalized","V Equalized"} , histogramChannels, "window",3000 );
     
@@ -173,18 +172,22 @@ cv::Mat equalizeBGRChannels(cv::Mat sourceImage)
     return equalizedBGRImage; 
 }
 
-std::vector<cv::Mat> calculateHistograms(cv::Mat sourceImage, int size, float* rangeChannels)
+std::vector<cv::Mat> calculateHistograms(cv::Mat sourceImage)
 {
-    std::vector<cv::Mat> channelsPre(3),channelsPost(3);
+    // Histogram equalization parameters
+    const int size = 256;
+    const float range[] = { 0,256 };
+    const float* histRange = { range };
+
+    std::vector<cv::Mat> channelsPre(3), histograms(3);
     cv::split(sourceImage, channelsPre);
-    const float* histRange = { rangeChannels };
 
     for (int i = 0; i < 3; i++)
     {
         // Computation of BGR histograms
-        cv::calcHist(&channelsPre[i], 1, 0, cv::Mat(), channelsPost[i], 1, &size, &histRange);
+        cv::calcHist(&channelsPre[i], 1, 0, cv::Mat(), histograms[i], 1, &size, &histRange);
     }
-    return channelsPost;
+    return histograms;
 }
 
 void showImagesAndHistogram(std::vector<cv::Mat> imagesVector,std::vector<cv::String> nameVector, std::vector<std::vector<cv::Mat>> histChannels, std::string winName,int delay)
