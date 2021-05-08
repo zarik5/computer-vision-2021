@@ -51,27 +51,29 @@ Regarding the remapping, even if the distortion coefficients are low, after the 
       & w/o {\cc cornerSubPix()} & w {\cc cornerSubPix()}\\
       \hline
       \hline
-      Instrinsic Matrix & 
+      Camera Matrix & 
       $ \begin{bmatrix} 2223& 0& 1499\\
         0& 2222& 970.9\\
-        0& 0& 1 \end{bmatrix}$ & 
+        0& 0& 1\end{bmatrix}$ & 
         $ \begin{bmatrix} 2224& 0& 1496\\
           0& 2222& 966.1\\
-          0& 0& 1 \end{bmatrix}$ \\
+          0& 0& 1 \end{bmatrix}$  \\
      \hline
      $\begin{matrix}
      \text{Distortion Coefficients}\\ \begin{bmatrix}k_1\\ k_2\\ k_3\\ p_1\\ p_2 \end{bmatrix} 
      \end{matrix}$ & 
-    $\begin{bmatrix}-0.1537\\ 0.2102\\ -0.1691\\ 0.0002\\ 0.0007\end{bmatrix}$ &
-     $\begin{bmatrix} -0.1449\\ 0.1558\\ -0.0743\\ -0.0003\\0.0004 \end{bmatrix}$ \\
+    $\begin{bmatrix} -153.7\times 10^{-3}\\ 210.2\times 10^{-3}\\ -169.1\times 10^{-3}\\ 215.2\times 10^{-6}\\ 707.3\times 10^{-6}\end{bmatrix}$ &
+     $\begin{bmatrix} -144.9\times 10^{-3}\\ 155.8\times 10^{-3}\\ -74.33\times 10^{-3}\\ -256.5\times 10^{-6}\\362.1\times 10^{-6} \end{bmatrix}$ \\
      \hline
-     RMS & 0.8319& 0.4444\\
+     EMR & $621.4\times 10^{-3}$& $347.3\times 10^{-3}$\\
      \hline
-     Best Image &   0.3056 & 0.2313\\
+     RMS & $831.9\times 10^{-3}$& $444.4\times 10^{-3}$\\
      \hline
-     Worst Image &  1.456& 0.9014\\
+     Best Image & $\begin{matrix}\text{EMR=} 266.6\times 10^{-3}\\ \text{RMS=} 305.6\times 10^{-3}\end{matrix}$ & $\begin{matrix}\text{EMR=} 204.6\times 10^{-3}\\ \text{RMS=} 231.3\times 10^{-3}\end{matrix}$\\
      \hline
-    \end{tabular}    
+     Worst Image & $\begin{matrix}\text{EMR=} 1.081\\ \text{RMS=} 1.456\end{matrix}$ & $\begin{matrix}\text{EMR=} 715.9\times 10^{-3}\\ \text{RMS=} 901.3\times 10^{-3}\end{matrix}$\\
+     \hline
+    \end{tabular}
   \caption{Results of calibration procedure with and without the {\cc cornerSubPix()} method.}
   \label{Table:values}
   \end{table}
@@ -88,4 +90,5 @@ Regarding the remapping, even if the distortion coefficients are low, after the 
     \caption{The worst case in the self taken set}
   \end{figure}
 \end{center}
+
 \end{document}

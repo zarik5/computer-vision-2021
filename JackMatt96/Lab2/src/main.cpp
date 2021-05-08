@@ -11,9 +11,9 @@
 
 
 void findChessboardPoints(cv::String, std::vector<std::vector<cv::Vec2f>> &, std::vector<cv::Mat> &, std::vector< cv::String >&);
-void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> ,cv::Size , cv::Size , float ,cv::Mat& , cv::Mat& ,std::vector<std::vector<cv::Vec2f>>& );
-double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>> ,std::vector<std::vector<cv::Vec2f>>& , std::vector <double>& );
-double meanRootReprojectionSquaredError(std::vector<std::vector<cv::Vec2f>> ,std::vector<std::vector<cv::Vec2f>>& , std::vector <double>& ); 
+void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>>& ,cv::Size , cv::Size , float ,cv::Mat& , cv::Mat& ,std::vector<std::vector<cv::Vec2f>>& );
+double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>>& ,std::vector<std::vector<cv::Vec2f>>& , std::vector <double>& );
+double meanRootReprojectionSquaredError(std::vector<std::vector<cv::Vec2f>>& ,std::vector<std::vector<cv::Vec2f>>& , std::vector <double>& ); 
 std::vector<cv::Vec3f> chessboard3dPoints(cv::Size , float );
 cv::Mat undistortImage(cv::Mat , cv::Mat , cv::Mat );
 
@@ -42,19 +42,21 @@ int main(){
 	double totalMRE = meanEuclidenReprojectionError(chessboardImagesPoints ,reprojectedPoints, MRE);
 	double totalRMSE = meanRootReprojectionSquaredError(chessboardImagesPoints ,reprojectedPoints, RMSE); 
 	
-	int minIdx, maxIdx, minSIdx, maxSIdx;
+	int minIdx[2], maxIdx[2], minSIdx[2], maxSIdx[2];
 	double minVal, maxVal, minSVal, maxSVal;
-	cv::minMaxIdx(MRE, &minVal, &maxVal, &minIdx, &maxIdx);
-	cv::minMaxIdx(RMSE, &minSVal, &maxSVal, &minSIdx, &maxSIdx);
+	cv::minMaxIdx(MRE, &minVal, &maxVal, minIdx, maxIdx);
+	cv::minMaxIdx(RMSE, &minSVal, &maxSVal, minSIdx, maxSIdx);
 	
 
     // Print to terminal of values obtained
 	std::cout << "\nCamera matrix: \n" << cameraMatrix
 		<< "\n\nDistortion coefficients: \n[k1 k2 p1 p2 k3] = " << distCoeffs
-		<< "\nBest image: " << minIdx <<" with mean reprojection error = "<< minVal 
-		<< "\nWorst image: " << maxIdx << " with mean reprojection error = " << maxVal
-		<< "\nBest image: " << minSIdx <<" with root mean squared reprojection error = "<< minSVal 
-		<< "\nWorst image: " << maxSIdx << " with root mean squared reprojection error = " << maxSVal << "\n";
+		<< "\n\nTotal mean euclidean reprojection error = "<< totalMRE 
+		<< "\nBest image: " << imagesName[minIdx[1]] <<" with mean reprojection error = "<< minVal 
+		<< "\nWorst image: " << imagesName[maxIdx[1]] << " with mean reprojection error = " << maxVal
+		<< "\n\nTotal root mean squared reprojection error = "<< totalRMSE 
+		<< "\nBest image: " << imagesName[minSIdx[1]] <<" with root mean squared reprojection error = "<< minSVal 
+		<< "\nWorst image: " << imagesName[maxSIdx[1]] << " with root mean squared reprojection error = " << maxSVal << "\n";
 
 	
 	// Loading and undistortion of an example image
@@ -63,14 +65,22 @@ int main(){
 
 
 	// Visualization for comparison of before and after the undistorting procedure image
-	int windowHeight=1024;
-	cv::resize(distortedImage, distortedImage, cv::Size(windowHeight * distortedImage.cols / distortedImage.rows, windowHeight));	
-	cv::resize(undistortedImage, undistortedImage, cv::Size(windowHeight * undistortedImage.cols / undistortedImage.rows, windowHeight));
+	int windowHeight=720, windowWidth=1280;
+	cv::Size imageResizeValue;
+	if(windowHeight * distortedImage.cols / distortedImage.rows>windowWidth){
+		imageResizeValue = cv::Size(windowWidth,windowWidth * distortedImage.rows / distortedImage.cols);
+	}
+	else{
+		imageResizeValue = cv::Size(windowHeight * distortedImage.cols / distortedImage.rows, windowHeight);
+	}
+
+	cv::resize(distortedImage, distortedImage, imageResizeValue,0,0,cv::INTER_LANCZOS4);	
+	cv::resize(undistortedImage, undistortedImage, imageResizeValue,0,0,cv::INTER_LANCZOS4);
 	cv::imshow("Original", distortedImage);
 	cv::imshow("Undistorted", undistortedImage);
-	cv::imwrite("Original.png",distortedImage);
-	cv::imwrite("Undistorted.png", undistortedImage);
-	cv::imwrite("Worst.png", chessboardImages[minSIdx]);
+	cv::imwrite("OriginalWO.png",distortedImage);
+	cv::imwrite("UndistortedWO.png", undistortedImage);
+	cv::imwrite("WorstWO.png", chessboardImages[maxSIdx[1]]);
 	cv::waitKey(); 
 
 	return 0;
@@ -121,17 +131,15 @@ void findChessboardPoints(cv::String chessboardDirectory, std::vector<std::vecto
 * @param cameraMatrix Camera matrix
 * @param distCoeffs Vector containing the distortion coefficients [k1 k2 p1 p2 k3]
 * @param projectedPoints Vector containing the points of the chessboard projected from 3D world to image plane through the calibration parameters
-* @param MRE Output vector of mean reprojection error per picture 
-* @param MRSE Output vector of root mean squared reprojection error per picture
 */
-void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints,cv::Size imageSize, cv::Size gridSize, float gridMeasure,cv::Mat &cameraMatrix, cv::Mat &distCoeffs,std::vector<std::vector<cv::Vec2f>>& projectedPoints){  
+void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints,cv::Size imageSize, cv::Size gridSize, float gridMeasure,cv::Mat &cameraMatrix, cv::Mat &distCoeffs,std::vector<std::vector<cv::Vec2f>>& projectedPoints){  
 	
 	// Computation of the chessboard pattern in vector form	
 	std::vector<cv::Vec3f> chessboard = chessboard3dPoints(gridSize,gridMeasure);
 
 	// Computation of camera intrinsic and extrinsic parameters and distiortion coefficients	
 	std::vector <cv::Mat> rvecs, tvecs;
-	cv::calibrateCamera(std::vector<std::vector<cv::Vec3f>> (chessboardImagesPoints.size(),chessboard), chessboardImagesPoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs);
+	std::cout<<cv::calibrateCamera(std::vector<std::vector<cv::Vec3f>> (chessboardImagesPoints.size(),chessboard), chessboardImagesPoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs)<<"\n";
 
 	projectedPoints = std::vector<std::vector<cv::Vec2f>> (chessboardImagesPoints.size());
 	for (size_t i = 0; i < chessboardImagesPoints.size(); i++)
@@ -147,7 +155,7 @@ void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> chessboardIma
 * @param MRE Output vector of mean reprojection error per picture 
 * @return Total mean reprojection error 
 */
-double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints,std::vector<std::vector<cv::Vec2f>>& projectedPoints, std::vector <double>& MRE){  
+double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints,std::vector<std::vector<cv::Vec2f>>& projectedPoints, std::vector <double>& MRE){  
 	
     // Computation of mean euclidean reprojection errors
 	MRE = std::vector <double> (chessboardImagesPoints.size());
@@ -162,7 +170,6 @@ double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>> chessbo
         MRE[i] = error / chessboardImagesPoints[i].size();
         totalError += error;      
 	}
-
 	return totalError/(chessboardImagesPoints[0].size()*chessboardImagesPoints.size());
 }
 
@@ -173,7 +180,7 @@ double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>> chessbo
 * @param RMSE Output vector of mean squared reprojection errors per picture 
 * @return Total mean squared reprojection errors 
 */
-double meanRootReprojectionSquaredError(std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints,std::vector<std::vector<cv::Vec2f>>& projectedPoints, std::vector <double>& RMSE ){  
+double meanRootReprojectionSquaredError(std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints,std::vector<std::vector<cv::Vec2f>>& projectedPoints, std::vector <double>& RMSE ){  
 	
     // Computation of root mean squared reprojection errors
 	RMSE = std::vector <double> (chessboardImagesPoints.size());
@@ -188,7 +195,6 @@ double meanRootReprojectionSquaredError(std::vector<std::vector<cv::Vec2f>> ches
         RMSE[i] = cv::sqrt(error / chessboardImagesPoints[i].size());
 		totalError += error;      
 	}      
-
 	return sqrt(totalError/(chessboardImagesPoints[0].size()*chessboardImagesPoints.size()));
 }
 

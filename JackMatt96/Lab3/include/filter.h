@@ -39,9 +39,8 @@ protected:
 	// window size
 	int filter_size;
 
-
-
 };
+
 
 
 // Gaussian Filter
@@ -71,6 +70,7 @@ private:
 };
 
 
+
 // Median Filter
 class MedianFilter : public Filter {
 
@@ -83,6 +83,7 @@ public:
 	void doFilter();
 
 };
+
 
 
 // Bilateral Filter
