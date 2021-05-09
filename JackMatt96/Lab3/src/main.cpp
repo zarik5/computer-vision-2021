@@ -36,7 +36,7 @@ int main()
 	 *****************************************************************/
 	
     std::vector<cv::Mat> histograms;
-    
+    // Loading and visualization of input image and RGB histograms associated
     cv::Mat originalImage = cv::imread(imagePath);
     calculateBGRHistograms(originalImage, histograms);
 
@@ -44,18 +44,18 @@ int main()
     cv::setWindowTitle("imageWindow","Original image");
     cv::imshow("imageWindow",originalImage);
     showHistogram(histograms);
-        	cv::imwrite("Original image.jpg", originalImage);
     cv::waitKey();
-
+    
+    // RGB histogram equalization and visualization the equalized image and RGB histograms associated
     cv::Mat equalizedBGRImage;
     equalizeBGRChannels(originalImage, equalizedBGRImage);
     calculateBGRHistograms(equalizedBGRImage, histograms);
     cv::setWindowTitle("imageWindow","RGB equalized image");
     cv::imshow("imageWindow",equalizedBGRImage);
-        	cv::imwrite("RGB equalized image.jpg", equalizedBGRImage);
     showHistogram(histograms);
     cv::waitKey();
     
+    // HSV histogram equalization, one channel at time, and visualization the equalized image and RGB histograms associated
     std::vector<cv::Mat> equalizedHSVImages;
     equalizeHSVChannels(originalImage, equalizedHSVImages);
 
@@ -64,7 +64,6 @@ int main()
         calculateBGRHistograms(equalizedHSVImages[i], histograms);
         cv::setWindowTitle("imageWindow",windowTitles[i]);
         cv::imshow("imageWindow",equalizedHSVImages[i]);
-        	cv::imwrite(windowTitles[i]+".jpg", equalizedHSVImages[i]);
         showHistogram(histograms);
         cv::waitKey();
     }
@@ -79,11 +78,11 @@ int main()
     // Initialization and maximum value of trackbars
     int initGausSize = 7,
         initGausSigma = 1,
-        maxGausSize = 50,
+        maxGausSize = 51,
         maxGausSigma = 25;
     
     int initMedSize = 11,
-        maxMedSize = 50;
+        maxMedSize = 51;
     
     int initBilRange = 5,
         initBilSpace = 1,
@@ -107,12 +106,7 @@ int main()
     cv::createTrackbar("S. Space", winNameBil, &initBilSpace, maxBilSpace, spaceBilateral, &Bilateral);
     cv::createTrackbar("S. Range", winNameBil, &initBilRange, maxBilRange, rangeBilateral, &Bilateral);
 
-    while(cv::waitKey()!=27)
-    {
-        	cv::imwrite("Bilateral.jpg", Bilateral.getResult());
-        	cv::imwrite("Gaussian.jpg", Gaussian.getResult());
-        	cv::imwrite("Median.jpg", Median.getResult());
-    }
+    cv::waitKey();
     return 0;
 }
 
