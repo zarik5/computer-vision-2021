@@ -11,7 +11,7 @@
 \usepackage{anysize} % Soporte para el comando \marginsize
 \usepackage{hyperref}
 \setlength\parindent{0pt}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=0.9in]{geometry}
 
 \newcommand{\cc}{\fontfamily{txtt}\selectfont}
 
@@ -50,7 +50,7 @@ The effect of this filter is lighter than the others and only for high parameter
 In particular it can remove small detail, for example the noise, maintaining the structure of most elements.
 If we use a too small $\sigma_c$, even using a large $\sigma_s$, it is not so useful since the colors are still off in some pixels.
 Choosing a good tradeoff is possible to observe that the example image is less grainy, maintaining recognizable the subject.
-If the values are too high the image assume a cartoonish look as can be seen in figure (\ref{fig:cartoon}).
+If the values are too high the image assume a cartoonish look as can be seen in figure (\ref{fig:cartoon}). For too high $\sigma_c$ the bilateral filter behaves like a slow gaussian filter due to the more complex code.
 
 \begin{figure}[htbp]
 \centering

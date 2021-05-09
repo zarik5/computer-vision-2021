@@ -86,7 +86,7 @@ int main()
     
     int initBilRange = 5,
         initBilSpace = 1,
-        maxBilRange = 250,
+        maxBilRange = 500,
         maxBilSpace = 25;
 
     // Creation of window and trackbar for gaussian filter 
