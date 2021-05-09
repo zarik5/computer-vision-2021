@@ -18,7 +18,7 @@
 \begin{document}
 \begin{center}
 \begin{tabular}{c}
-\LARGE{Lab 3}\\
+\LARGE{Computer Vision LAB 3 Report}\\
 \large{Mattia Giacomello}\\
 I.D. 1210988
 \end{tabular}
@@ -28,28 +28,24 @@ I.D. 1210988
 The objective of this homework is show the difference in histogram equalization applied in different color space and the implementation of three filters seen during class through a system of classes and their effect varying the parameters.
 
 \section{Procedure}
-The two color spaces considered are the BGR and the HSV color space. \newline 
-For the first, the histogram equalization is computed on each element separately while in the second case the histograms equalization is computed on one channel at time.
-
-This choice is made considering that the first channel, the Hue, is a value that define the color so every change in this channel will change completely the image.
-Between the 2 remaining values the Value channel can be considered as a weight that identifies the intensity of the pixel, from dark to bright. \newline
-The BGR histograms and the relative images are shown in sequence to show the differences at interval of three seconds.\newline
-At first sight is clearly visible the first method changes the color of pixels.
+We perform the histogram equalization in two different ways for the two color spaces considered, BGR and HSV, since the channels have different meaning for each color space.
+For the first one, the histogram equalization is computed on each channel separately while for the second one the histograms equalization is computed on one channel at time while the other two are maintained without changes.
+At first sight is clearly visible the RGB equalization changes the color of pixels greatly as in the figure (\ref{fig:BGREqual}).
 This makes the images with warm tint more cold, since it push the histogram of blue channel that is condensed in the low values more high, making the opposite in the red channel histogram.
-The same phenomena is given with cold tint which are made warmer as in the figure (\ref{fig:HistEq}).
-In the same figure we can observe that the image V equalized keeps the base color but change the brightness of the pixel.
-In this way an overexposed image is less burnt and an image with warm tint has the same tint but with a more balanced brightness distribution.
-\newline
-At this point the V equalized image is filtered through three filters: Median, Gaussian and Bilateral filter.
+A similar phenomena is observable in an image with cold tint, that will be made warmer.\newline
+Regarding the HSV color space, if the Hue channel is equalized we can observe that the images are still a little understandable but the color are all wrong since we are flattering the histogram of the colors channel.
+In the Saturation channel in the first image we can observe that there is a improvement but in the other one, as in the hue case, the color are changed too much.
+Considering the Value channel, that can be seen as the brightness of the pixels, we can observe a better enhancing of the quality of images \ref{fig:v}, since the overexposed image is darkened without much alteration of the colors.\newline
+At this point the V equalized image, the best one till now, is filtered through three filters: Median, Gaussian and Bilateral filter.
 To implement these filters are created four class, one for each filter and a generic {\cc Filter} class from which the other are derived.
-This implementation makes managing the various filters simple.\newline
+This implementation makes managing the various filters simple.
 The effects of the Median filter is noticeable in noisy images, since it removes pixels with high sudden changes.
 We can observe that figure (\ref{fig:mednoise}) shows how the noise is less noticeable loosing a bit of quality.
 Increasing the size the image became more blured, removing small details, till the elements became blobs of quasi constant color and difficult to distinguish.\newline
 The Gaussian filter effect is more obvious: increasing the value of sigma and the window size the output image results more blured and the fine details are unrecognizable.
 This helps to remove some noise and smooth squared colored areas obtained from the equalization.
 If $\sigma$ is fixed and the size is low the effect is similar to a mean filter, since the values of kernel are quasi constant, while if the window exceed the 6$\sigma$ rule there are unnoticeable changes, since the kernel in the exceeding area is almost 0.\newline
-For the Bilateral filter, to simplify the test, the size of filter is fixed to $6\sigma_{S}$.
+For the Bilateral filter, to simplify the test, the size of filter is fixed to $6\sigma_{S}$. This is computationally heavy for large $\sigma_s$ values and for real time filtering will be better to set it to a fixed value, but for understanding better the filter effects is more interesting this setup.
 The effect of this filter is lighter than the others and only for high parameter's values it's sensible its effect.
 In particular it can remove small detail, for example the noise, maintaining the structure of most elements.
 If we use a too small $\sigma_c$, even using a large $\sigma_s$, it is not so useful since the colors are still off in some pixels.
@@ -58,7 +54,7 @@ If the values are too high the image assume a cartoonish look as can be seen in 
 
 \begin{figure}[htbp]
 \centering
-\begin{minipage}{\textwidth}
+\begin{minipage}{0.7\textwidth}
 \begin{minipage}{0.4\textwidth}
   \centering
 \includegraphics[width=0.98\textwidth]{Pictures/lena.jpg}
@@ -69,7 +65,8 @@ If the values are too high the image assume a cartoonish look as can be seen in 
 \end{minipage}
 \subcaption{Original Images}
 \end{minipage}\\
-\begin{minipage}{\textwidth}
+
+\begin{minipage}{0.7\textwidth}
 \begin{minipage}{0.4\textwidth}
   \centering
 \includegraphics[width=0.98\textwidth]{Pictures/Lena_BGR_Equalized.jpg}
@@ -78,21 +75,48 @@ If the values are too high the image assume a cartoonish look as can be seen in 
   \centering
 \includegraphics[width=0.98\textwidth]{Pictures/Overexposed_BGR_Equalized.jpg}
 \end{minipage}
-\subcaption{BGR Equalized}
+\subcaption{BGR Equalized}\label{fig:BGREqual}
 \end{minipage}\\
-\begin{minipage}{\textwidth}
+
+\begin{minipage}{0.7\textwidth}
 \begin{minipage}{0.4\textwidth}
   \centering
-\includegraphics[width=0.98\textwidth]{Pictures/Lena_V_Equalized.jpg}
+\includegraphics[width=0.98\textwidth]{Pictures/HL.jpg}
 \end{minipage}%
 \begin{minipage}{0.6\textwidth}
   \centering
-\includegraphics[width=0.98\textwidth]{Pictures/Overexposed_V_Equalized.jpg}
+\includegraphics[width=0.98\textwidth]{Pictures/HO.jpg}
 \end{minipage}
-\subcaption{V Equalized}
+\subcaption{H Equalized}
+\end{minipage}\\
+
+\begin{minipage}{0.7\textwidth}
+\begin{minipage}{0.4\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/SL.jpg}
+\end{minipage}%
+\begin{minipage}{0.6\textwidth}
+  \centering
+\includegraphics[width=0.98\textwidth]{Pictures/SO.jpg}
 \end{minipage}
-\caption{Example of histograms equalization on different images} \label{fig:HistEq}
+\subcaption{S Equalized}
+\end{minipage}\\
+
+\begin{minipage}{0.7\textwidth}
+  \begin{minipage}{0.4\textwidth}
+    \centering
+  \includegraphics[width=0.98\textwidth]{Pictures/Lena_V_Equalized.jpg}
+  \end{minipage}%
+  \begin{minipage}{0.6\textwidth}
+    \centering
+  \includegraphics[width=0.98\textwidth]{Pictures/Overexposed_V_Equalized.jpg}
+  \end{minipage}
+  \subcaption{V Equalized}\label{fig:v}
+  \end{minipage}
+
+\caption{Example of histograms equalization on different images} 
 \end{figure}
+
 
 \begin{figure}[htbp]
 \centering
@@ -110,7 +134,7 @@ If the values are too high the image assume a cartoonish look as can be seen in 
 \begin{minipage}{0.5\textwidth}
   \centering
 \includegraphics[width=0.98\textwidth]{Pictures/Med.jpg}
-\subcaption{Size=60, blob effect}
+\subcaption{Size=50, blob effect}
   \end{minipage}
 \end{center}
 \caption{Example of Median filter with various size}

@@ -1,7 +1,6 @@
 // Giacomello Mattia
 // I.D. 1210988
 
-
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -27,27 +26,15 @@ std::string winNameGaus = "Gaussian Filter";
 std::string winNameMed = "Median Filter";
 std::string winNameBil = "Bilateral Filter";
 
-// Initialization and maximum value of trackbars
-int initGausSize = 11;
-int initGausSigma = 5;
-int maxGausSize = 50;
-int maxGausSigma = 25;
-
-int initMedSize = 11;
-int maxMedSize = 50;
-
-int initBilRange = 5;
-int initBilSpace = 5;
-int maxBilRange = 250;
-int maxBilSpace = 25;
-
 cv::String imagePath = "..\\..\\data\\lena.png";
 
 
 int main()
-{
-
-    
+{    
+	/*****************************************************************
+	 * First Part: Histogram Equalization on BGR and HSV Color Spaces*
+	 *****************************************************************/
+	
     std::vector<cv::Mat> histograms;
     
     cv::Mat originalImage = cv::imread(imagePath);
@@ -57,6 +44,7 @@ int main()
     cv::setWindowTitle("imageWindow","Original image");
     cv::imshow("imageWindow",originalImage);
     showHistogram(histograms);
+        	cv::imwrite("Original image.jpg", originalImage);
     cv::waitKey();
 
     cv::Mat equalizedBGRImage;
@@ -64,20 +52,19 @@ int main()
     calculateBGRHistograms(equalizedBGRImage, histograms);
     cv::setWindowTitle("imageWindow","RGB equalized image");
     cv::imshow("imageWindow",equalizedBGRImage);
+        	cv::imwrite("RGB equalized image.jpg", equalizedBGRImage);
     showHistogram(histograms);
     cv::waitKey();
     
     std::vector<cv::Mat> equalizedHSVImages;
-    std::cout<<"1\n";
     equalizeHSVChannels(originalImage, equalizedHSVImages);
-    std::cout<<"2\n";
 
     std::vector<cv::String> windowTitles = {"H equalized image","S equalized image","V equalized image"};
     for(int i=0 ; i<3; i++){
-        std::cout<<i<<"\n";
         calculateBGRHistograms(equalizedHSVImages[i], histograms);
         cv::setWindowTitle("imageWindow",windowTitles[i]);
         cv::imshow("imageWindow",equalizedHSVImages[i]);
+        	cv::imwrite(windowTitles[i]+".jpg", equalizedHSVImages[i]);
         showHistogram(histograms);
         cv::waitKey();
     }
@@ -85,6 +72,24 @@ int main()
     cv::destroyAllWindows();
 
     
+	/********************************
+	 * Second Part: Image Filtering *
+	 ********************************/	
+    
+    // Initialization and maximum value of trackbars
+    int initGausSize = 7,
+        initGausSigma = 1,
+        maxGausSize = 50,
+        maxGausSigma = 25;
+    
+    int initMedSize = 11,
+        maxMedSize = 50;
+    
+    int initBilRange = 5,
+        initBilSpace = 1,
+        maxBilRange = 250,
+        maxBilSpace = 25;
+
     // Creation of window and trackbar for gaussian filter 
     GaussianFilter Gaussian(equalizedHSVImages[2], initGausSize, initGausSigma);
     sizeGaussian(initGausSize,&Gaussian);
@@ -102,9 +107,90 @@ int main()
     cv::createTrackbar("S. Space", winNameBil, &initBilSpace, maxBilSpace, spaceBilateral, &Bilateral);
     cv::createTrackbar("S. Range", winNameBil, &initBilRange, maxBilRange, rangeBilateral, &Bilateral);
 
-    cv::waitKey();
+    while(cv::waitKey()!=27)
+    {
+        	cv::imwrite("Bilateral.jpg", Bilateral.getResult());
+        	cv::imwrite("Gaussian.jpg", Gaussian.getResult());
+        	cv::imwrite("Median.jpg", Median.getResult());
+    }
     return 0;
 }
+
+
+
+/**
+* Method to compute HSV equalized images one channel for image
+* @param src Image input   
+* @param equalizedBGRImages Output vector of HSV equalized images one channel for image
+*/
+void equalizeHSVChannels(cv::Mat src, std::vector<cv::Mat>& equalizedBGRImages)
+{
+    cv::Mat HSVImage;
+    std::vector<cv::Mat> HSVChannels(3);
+	cv::cvtColor(src, HSVImage, cv::COLOR_BGR2HSV);
+    cv::split(HSVImage, HSVChannels);
+
+    equalizedBGRImages = std::vector<cv::Mat>(3);
+
+    for(int i=0;i<3;i++)
+    {
+        // We make a copy of the vector of the channels and then we substitute the equalized corrisponding channel
+        
+        std::vector<cv::Mat> equalizedHSVChannels = HSVChannels;
+        cv::Mat equalizedHSVChannelTmp;
+        cv::equalizeHist(HSVChannels[i], equalizedHSVChannelTmp);
+        equalizedHSVChannels[i]=equalizedHSVChannelTmp;
+
+        cv::Mat equalizedHSVImage;
+        cv::merge(equalizedHSVChannels, equalizedHSVImage);   
+        
+        cv::cvtColor(equalizedHSVImage, equalizedBGRImages[i], cv::COLOR_HSV2BGR);
+    }
+}
+
+/**
+* Method to compute the BGR equalize image 
+* @param src Image input  
+* @param dst Output equalized image
+*/
+void equalizeBGRChannels(cv::Mat src, cv::Mat& dst)
+{
+    
+    std::vector<cv::Mat> channelsBGRPre(3), channelsBGRPost(3);
+    cv::split(src, channelsBGRPre);
+    for (int i = 0; i < 3; i++)
+    {
+        // Histhogram equalization of BGR channels
+        cv::equalizeHist(channelsBGRPre[i], channelsBGRPost[i]);
+    }
+    // Merge of BGR channels equalized
+    cv::merge(channelsBGRPost, dst);
+}
+
+/**
+* Method to compute the BGR histograms 
+* @param src Image input  
+* @param BGRHistograms Output vector of histograms
+*/
+void calculateBGRHistograms(cv::Mat src, std::vector<cv::Mat>& BGRHistograms)
+{
+    // Histogram equalization parameters
+    const int size = 256;
+    const float range[] = { 0,256 };
+    const float* histRange = { range };
+
+    std::vector<cv::Mat> channelsPre(3);
+    BGRHistograms = std::vector<cv::Mat>(3);
+    cv::split(src, channelsPre);
+
+    for (int i = 0; i < 3; i++)
+    {
+        // Computation of BGR histograms
+        cv::calcHist(&channelsPre[i], 1, 0, cv::Mat(), BGRHistograms[i], 1, &size, &histRange);
+    }
+}
+
+
 
 void sizeGaussian(int newSize, void* GaussianParsed)
 {
@@ -148,75 +234,6 @@ void rangeBilateral(int newRange, void* BilateralParsed)
 }
 
 
-/**
-* Method to retrieve from a directory the image's chessboard points to calibrate a camera 
-* @param src Path to the folder containing the images  
-* @param equalizedBGRImages Vector containing the points of the chessboard in the image plane for each image
-*/
-void equalizeHSVChannels(cv::Mat src, std::vector<cv::Mat>& equalizedBGRImages)
-{
-    cv::Mat HSVImage;
-    std::vector<cv::Mat> HSVChannels(3);
-	cv::cvtColor(src, HSVImage, cv::COLOR_BGR2HSV);
-    cv::split(HSVImage, HSVChannels);
-
-    equalizedBGRImages = std::vector<cv::Mat>(3);
-
-    for(int i=0;i<3;i++)
-    {
-        std::vector<cv::Mat> equalizedHSVChannels = HSVChannels;
-        cv::Mat equalizedHSVChannelTmp;
-        cv::equalizeHist(HSVChannels[i], equalizedHSVChannelTmp);
-        equalizedHSVChannels[i]=equalizedHSVChannelTmp;
-
-        cv::Mat equalizedHSVImage;
-        cv::merge(equalizedHSVChannels, equalizedHSVImage);   
-        
-        cv::cvtColor(equalizedHSVImage, equalizedBGRImages[i], cv::COLOR_HSV2BGR);
-    }
-}
-
-/**
-* Method to retrieve from a directory the image's chessboard points to calibrate a camera 
-* @param src Path to the folder containing the images  
-* @param dst Vector containing the points of the chessboard in the image plane for each image
-*/
-void equalizeBGRChannels(cv::Mat src, cv::Mat& dst)
-{
-    
-    std::vector<cv::Mat> channelsBGRPre(3), channelsBGRPost(3);
-    cv::split(src, channelsBGRPre);
-    for (int i = 0; i < 3; i++)
-    {
-        // Histhogram equalization of BGR channels
-        cv::equalizeHist(channelsBGRPre[i], channelsBGRPost[i]);
-    }
-    // Merge of BGR channels equalized
-    cv::merge(channelsBGRPost, dst);
-}
-
-/**
-* Method to retrieve from a directory the image's chessboard points to calibrate a camera 
-* @param src Path to the folder containing the images  
-* @param BGRHistograms Vector containing the points of the chessboard in the image plane for each image
-*/
-void calculateBGRHistograms(cv::Mat src, std::vector<cv::Mat>& BGRHistograms)
-{
-    // Histogram equalization parameters
-    const int size = 256;
-    const float range[] = { 0,256 };
-    const float* histRange = { range };
-
-    std::vector<cv::Mat> channelsPre(3);
-    BGRHistograms = std::vector<cv::Mat>(3);
-    cv::split(src, channelsPre);
-
-    for (int i = 0; i < 3; i++)
-    {
-        // Computation of BGR histograms
-        cv::calcHist(&channelsPre[i], 1, 0, cv::Mat(), BGRHistograms[i], 1, &size, &histRange);
-    }
-}
 
 
 // hists = vector of 3 cv::mat of size nbins=256 with the 3 histograms

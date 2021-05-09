@@ -25,6 +25,9 @@ std::string distortedImagePath = "..\\..\\data\\_DSC6070.jpg";
 
 int main(){
 
+	/**********************************
+	 * First Part: Camera Calibration *
+	 **********************************/
 
 	// Extraction from the given path of chessboard points, images and image names
 	std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints;
@@ -58,6 +61,10 @@ int main(){
 		<< "\nBest image: " << imagesName[minSIdx[1]] <<" with root mean squared reprojection error = "<< minSVal 
 		<< "\nWorst image: " << imagesName[maxSIdx[1]] << " with root mean squared reprojection error = " << maxSVal << "\n";
 
+
+	/***********************************************
+	 * Second Part: Undistortion and visualization *
+	 ***********************************************/
 	
 	// Loading and undistortion of an example image
 	cv::Mat distortedImage = cv::imread(distortedImagePath);
@@ -65,6 +72,7 @@ int main(){
 
 
 	// Visualization for comparison of before and after the undistorting procedure image
+	// Values to resize the images to a smaller window, in particular the maximum size will be that of a 720p 16:9 display
 	int windowHeight=720, windowWidth=1280;
 	cv::Size imageResizeValue;
 	if(windowHeight * distortedImage.cols / distortedImage.rows>windowWidth){
@@ -78,9 +86,11 @@ int main(){
 	cv::resize(undistortedImage, undistortedImage, imageResizeValue,0,0,cv::INTER_LANCZOS4);
 	cv::imshow("Original", distortedImage);
 	cv::imshow("Undistorted", undistortedImage);
-	cv::imwrite("OriginalWO.png",distortedImage);
-	cv::imwrite("UndistortedWO.png", undistortedImage);
-	cv::imwrite("WorstWO.png", chessboardImages[maxSIdx[1]]);
+	cv::imwrite("OriginalW.jpg",distortedImage);
+	cv::imwrite("UndistortedW.jpg", undistortedImage);
+	cv::Mat imge;
+	cv::resize(chessboardImages[maxSIdx[1]], imge, imageResizeValue,0,0,cv::INTER_LANCZOS4);
+	cv::imwrite("WorstW.jpg", imge);
 	cv::waitKey(); 
 
 	return 0;
