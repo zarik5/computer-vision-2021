@@ -35,7 +35,7 @@ This makes the images with warm tint more cold, since it push the histogram of b
 A similar phenomena is observable in an image with cold tint, that will be made warmer.\newline
 Regarding the HSV color space, if the Hue channel is equalized we can observe that the images are still a little understandable but the color are all wrong since we are flattering the histogram of the colors channel.
 In the Saturation channel in the first image we can observe that there is a improvement but in the other one, as in the hue case, the color are changed too much.
-Considering the Value channel, that can be seen as the brightness of the pixels, we can observe a better enhancing of the quality of images \ref{fig:v}, since the overexposed image is darkened without much alteration of the colors.\newline
+Considering the Value channel, that can be seen as the brightness of the pixels, we can observe a better enhancing of the quality of images (\ref{fig:v}), since the overexposed image is darkened without much alteration of the colors.\newline
 At this point the V equalized image, the best one till now, is filtered through three filters: Median, Gaussian and Bilateral filter.
 To implement these filters are created four class, one for each filter and a generic {\cc Filter} class from which the other are derived.
 This implementation makes managing the various filters simple.
