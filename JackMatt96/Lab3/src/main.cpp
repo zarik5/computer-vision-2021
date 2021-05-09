@@ -10,7 +10,7 @@
 
 // Definition of auxiliary functions
 void showHistogram(std::vector<cv::Mat>&);
-void equalizeHSVChannels(cv::Mat,std::vector<cv::Mat>& );
+void equalizeHSVChannels(cv::Mat,cv::Mat&, int);
 void equalizeBGRChannels(cv::Mat,cv::Mat&);
 void calculateBGRHistograms(cv::Mat,std::vector<cv::Mat>& );
 
@@ -21,12 +21,13 @@ void rangeBilateral(int, void* );
 void spaceBilateral(int, void* );
 
 
-
+// Windows names to show
 std::string winNameGaus = "Gaussian Filter";
 std::string winNameMed = "Median Filter";
 std::string winNameBil = "Bilateral Filter";
 
-cv::String imagePath = "..\\..\\data\\lena.png";
+cv::String imagePath = "..\\..\\data\\lena.png"; // Path of the image to test
+int HSVChannelSelector = 2; // HSV Channel selector for the equalization
 
 
 int main()
@@ -55,18 +56,16 @@ int main()
     showHistogram(histograms);
     cv::waitKey();
     
-    // HSV histogram equalization, one channel at time, and visualization the equalized image and RGB histograms associated
-    std::vector<cv::Mat> equalizedHSVImages;
-    equalizeHSVChannels(originalImage, equalizedHSVImages);
+    // HSV histogram equalization on the channel selected and visualization the equalized image and RGB histograms associated
+    cv::Mat equalizedVImage;
+    equalizeHSVChannels(originalImage, equalizedVImage, HSVChannelSelector);
+    std::vector<cv::String> HSVWindowsName={"H equalized image","S equalized image","V equalized image"};
 
-    std::vector<cv::String> windowTitles = {"H equalized image","S equalized image","V equalized image"};
-    for(int i=0 ; i<3; i++){
-        calculateBGRHistograms(equalizedHSVImages[i], histograms);
-        cv::setWindowTitle("imageWindow",windowTitles[i]);
-        cv::imshow("imageWindow",equalizedHSVImages[i]);
-        showHistogram(histograms);
-        cv::waitKey();
-    }
+    calculateBGRHistograms(equalizedVImage, histograms);
+    cv::setWindowTitle("imageWindow",HSVWindowsName[HSVChannelSelector]);
+    cv::imshow("imageWindow",equalizedVImage);
+    showHistogram(histograms);
+    cv::waitKey();
 
     cv::destroyAllWindows();
 
@@ -90,18 +89,18 @@ int main()
         maxBilSpace = 25;
 
     // Creation of window and trackbar for gaussian filter 
-    GaussianFilter Gaussian(equalizedHSVImages[2], initGausSize, initGausSigma);
+    GaussianFilter Gaussian(equalizedVImage, initGausSize, initGausSigma);
     sizeGaussian(initGausSize,&Gaussian);
     cv::createTrackbar("Size", winNameGaus, &initGausSize, maxGausSize, sizeGaussian, &Gaussian);
     cv::createTrackbar("Sigma", winNameGaus, &initGausSigma, maxGausSigma, sigmaGaussian, &Gaussian);
 
     // Creation of window and trackbar for median filter 
-    MedianFilter Median(equalizedHSVImages[2], initMedSize);
+    MedianFilter Median(equalizedVImage, initMedSize);
     sizeMedian(initMedSize, &Median);
     cv::createTrackbar("Size", winNameMed, &initMedSize, maxMedSize, sizeMedian, &Median);
 
     // Creation of window and trackbar for bilinear filter 
-    BilateralFilter Bilateral(equalizedHSVImages[2], initBilSpace * 6, initBilSpace, initBilRange);
+    BilateralFilter Bilateral(equalizedVImage, initBilSpace * 6, initBilSpace, initBilRange);
     spaceBilateral(initBilSpace, &Bilateral);
     cv::createTrackbar("S. Space", winNameBil, &initBilSpace, maxBilSpace, spaceBilateral, &Bilateral);
     cv::createTrackbar("S. Range", winNameBil, &initBilRange, maxBilRange, rangeBilateral, &Bilateral);
@@ -113,33 +112,28 @@ int main()
 
 
 /**
-* Method to compute HSV equalized images one channel for image
+* Method to compute HSV equalized image for the selected channel
 * @param src Image input   
-* @param equalizedBGRImages Output vector of HSV equalized images one channel for image
+* @param equalizedBGRImages Output HSV equalized image on the selected channel
+* @param channel Selector of the channel: 0-Hue, 1-Saturation, 2-Value
 */
-void equalizeHSVChannels(cv::Mat src, std::vector<cv::Mat>& equalizedBGRImages)
+void equalizeHSVChannels(cv::Mat src, cv::Mat& equalizedBGRImage, int channel)
 {
     cv::Mat HSVImage;
     std::vector<cv::Mat> HSVChannels(3);
 	cv::cvtColor(src, HSVImage, cv::COLOR_BGR2HSV);
     cv::split(HSVImage, HSVChannels);
 
-    equalizedBGRImages = std::vector<cv::Mat>(3);
-
-    for(int i=0;i<3;i++)
-    {
-        // We make a copy of the vector of the channels and then we substitute the equalized corrisponding channel
+    // We equalize the selected channel and substitue in the vector before the merging
+    cv::Mat equalizedHSVChannelTmp;
+    cv::equalizeHist(HSVChannels[channel], equalizedHSVChannelTmp);
+    HSVChannels[channel]=equalizedHSVChannelTmp;
+    
+    cv::Mat equalizedHSVImage;
+    cv::merge(HSVChannels, equalizedHSVImage);   
         
-        std::vector<cv::Mat> equalizedHSVChannels = HSVChannels;
-        cv::Mat equalizedHSVChannelTmp;
-        cv::equalizeHist(HSVChannels[i], equalizedHSVChannelTmp);
-        equalizedHSVChannels[i]=equalizedHSVChannelTmp;
-
-        cv::Mat equalizedHSVImage;
-        cv::merge(equalizedHSVChannels, equalizedHSVImage);   
-        
-        cv::cvtColor(equalizedHSVImage, equalizedBGRImages[i], cv::COLOR_HSV2BGR);
-    }
+    cv::cvtColor(equalizedHSVImage, equalizedBGRImage, cv::COLOR_HSV2BGR);
+    
 }
 
 /**
