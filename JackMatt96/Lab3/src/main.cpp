@@ -105,7 +105,7 @@ int main()
     spaceBilateral(initBilSpace, &Bilateral);
     cv::createTrackbar("S. Space", winNameBil, &initBilSpace, maxBilSpace, spaceBilateral, &Bilateral);
     cv::createTrackbar("S. Range", winNameBil, &initBilRange, maxBilRange, rangeBilateral, &Bilateral);
-
+    
     cv::waitKey();
     return 0;
 }

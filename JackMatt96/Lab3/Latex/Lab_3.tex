@@ -50,7 +50,7 @@ The effect of this filter is lighter than the others and only for high parameter
 In particular it can remove small detail, for example the noise, maintaining the structure of most elements.
 If we use a too small $\sigma_c$, even using a large $\sigma_s$, it is not so useful since the colors are still off in some pixels.
 Choosing a good tradeoff is possible to observe that the example image is less grainy, maintaining recognizable the subject.
-If the values are too high the image assume a cartoonish look as can be seen in figure (\ref{fig:cartoon}). For too high $\sigma_c$ the bilateral filter behaves like a slow gaussian filter due to the more complex code.
+If the values are too high the image assume a cartoonish look as can be seen in figure (\ref{fig:cartoon}). For too high $\sigma_c$ the bilateral filter behaves like a slow gaussian filter due to the more complex code as can be seen comparing figures (\ref{fig:good}) and (\ref{fig:tooMuch}).
 
 \begin{figure}[htbp]
 \centering
@@ -150,7 +150,7 @@ If the values are too high the image assume a cartoonish look as can be seen in 
   \begin{minipage}{0.5\textwidth}
     \centering
   \includegraphics[width=0.98\textwidth]{Pictures/GausGoodSize.jpg}
-  \subcaption{Size=31$\approx$6$\sigma$, tipical choice}
+  \subcaption{Size=31$\approx$6$\sigma$, tipical choice}\label{fig:good}
   \end{minipage}\\
   \begin{center}
   \begin{minipage}{0.5\textwidth}
@@ -169,23 +169,22 @@ If the values are too high the image assume a cartoonish look as can be seen in 
     \includegraphics[width=0.98\textwidth]{Pictures/Bil50_10.jpg}
     \subcaption{$\sigma_c$=10, $\sigma_s$=50}
     \end{minipage}%
-    \begin{minipage}{0.5\textwidth}
-      \centering
-    \includegraphics[width=0.98\textwidth]{Pictures/Bil10_50.jpg}
-    \subcaption{$\sigma_c$=50, $\sigma_s$=10}
-    \end{minipage}\\
-
 \begin{minipage}{0.5\textwidth}
   \centering
 \includegraphics[width=0.98\textwidth]{Pictures/Bil3_150.jpg}
 \subcaption{$\sigma_c$=150, $\sigma_s$=3}
-\end{minipage}%
+\end{minipage}\\
     \begin{minipage}{0.5\textwidth}
       \centering
     \includegraphics[width=0.98\textwidth]{Pictures/BilCartoon.jpg}
     \subcaption{$\sigma_c$=200, $\sigma_s$=5}\label{fig:cartoon}
-      \end{minipage}
+      \end{minipage}%
+      \begin{minipage}{0.5\textwidth}
+        \centering
+      \includegraphics[width=0.98\textwidth]{Pictures/tooMuch.jpg}
+      \subcaption{$\sigma_c$=500, $\sigma_s$=5}\label{fig:tooMuch}
+        \end{minipage}
     \caption{Example with Bilater filter with various parameters}
-    \end{figure} 
+    \end{figure}     
 
 \end{document}
