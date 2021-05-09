@@ -11,18 +11,23 @@
 
 
 void findChessboardPoints(cv::String, std::vector<std::vector<cv::Vec2f>> &, std::vector<cv::Mat> &, std::vector< cv::String >&);
-void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> ,cv::Size , cv::Size , float ,cv::Mat& , cv::Mat& ,std::vector <double>& ,std::vector <double>& );
+void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>>& ,cv::Size , cv::Size , float ,cv::Mat& , cv::Mat& ,std::vector<std::vector<cv::Vec2f>>& );
+double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>>& ,std::vector<std::vector<cv::Vec2f>>& , std::vector <double>& );
+double rootMeanSquaredReprojectionError(std::vector<std::vector<cv::Vec2f>>& ,std::vector<std::vector<cv::Vec2f>>& , std::vector <double>& ); 
 std::vector<cv::Vec3f> chessboard3dPoints(cv::Size , float );
 cv::Mat undistortImage(cv::Mat , cv::Mat , cv::Mat );
 
 
 cv::Size gridCorners(7,5);
 float gridMeasure = 0.03;
-cv::String chessboardDirectoryPath = "./data/";
-std::string distortedImagePath = "./data/_DSC6070.jpg";
+cv::String chessboardDirectoryPath = "..\\..\\data\\";
+std::string distortedImagePath = "..\\..\\data\\_DSC6070.jpg";
 
 int main(){
 
+	/**********************************
+	 * First Part: Camera Calibration *
+	 **********************************/
 
 	// Extraction from the given path of chessboard points, images and image names
 	std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints;
@@ -30,24 +35,36 @@ int main(){
     std::vector<cv::String >imagesName;
 	findChessboardPoints(chessboardDirectoryPath, chessboardImagesPoints, chessboardImages, imagesName);
 	    
-	// Computation of intrinsic parameters, reprojection errors and root means squared reprojection errors throught the chessboard calibration procedure
+	// Computation of intrinsic parameters and reprojected points throught the chessboard calibration procedure
 	cv::Mat cameraMatrix, distCoeffs;
-	std::vector <double> meanReprojectionErrors, meanSquaredReprojectionErrors;
-	std::cout<<chessboardImagesPoints.size()<<"\n";
-	calibrateCameraChessboard(chessboardImagesPoints, chessboardImages[0].size(), gridCorners, gridMeasure, cameraMatrix,  distCoeffs, meanReprojectionErrors, meanSquaredReprojectionErrors);
+	std::vector<std::vector<cv::Vec2f>> reprojectedPoints;
+	calibrateCameraChessboard(chessboardImagesPoints, chessboardImages[0].size(), gridCorners, gridMeasure, cameraMatrix,  distCoeffs, reprojectedPoints);
 
-	int minIdx, maxIdx, minSIdx, maxSIdx;
-	cv::minMaxIdx(meanReprojectionErrors,NULL,NULL,&minIdx,&maxIdx);
-	cv::minMaxIdx(meanSquaredReprojectionErrors,NULL,NULL,&minSIdx,&maxSIdx);
+	// Computation of mean euclidean reprojection errors and root mean squared reprojection errors
+	std::vector <double> MRE, RMS;
+	double totalMRE = meanEuclidenReprojectionError(chessboardImagesPoints ,reprojectedPoints, MRE);
+	double totalRMS = rootMeanSquaredReprojectionError(chessboardImagesPoints ,reprojectedPoints, RMS); 
+	
+	int minIdx[2], maxIdx[2], minSIdx[2], maxSIdx[2];
+	double minVal, maxVal, minSVal, maxSVal;
+	cv::minMaxIdx(MRE, &minVal, &maxVal, minIdx, maxIdx);
+	cv::minMaxIdx(RMS, &minSVal, &maxSVal, minSIdx, maxSIdx);
+	
 
     // Print to terminal of values obtained
-	std::cout << "\nIntrinsic Parameters: \n" << cameraMatrix
-		<< "\n\nLens coefficients: \n[k1 k2 p1 p2 k3] = " << distCoeffs
-		<< "\nBest image: " << imagesName[minIdx] <<" with mean reprojection error = "<< meanReprojectionErrors[minIdx] 
-		<< "\nWorst image: " << imagesName[maxIdx] << " with mean reprojection error = " << meanReprojectionErrors[maxIdx]
-		<< "\nBest image: " << imagesName[minSIdx] <<" with mean squared reprojection error = "<< meanSquaredReprojectionErrors[minSIdx] 
-		<< "\nWorst image: " << imagesName[maxSIdx] << " with mean squared reprojection error = " << meanSquaredReprojectionErrors[maxSIdx] << "\n";
+	std::cout << "\nCamera matrix: \n" << cameraMatrix
+		<< "\n\nDistortion coefficients: \n[k1 k2 p1 p2 k3] = " << distCoeffs
+		<< "\n\nTotal mean euclidean reprojection error = "<< totalMRE 
+		<< "\nBest image: " << imagesName[minIdx[1]] <<" with mean reprojection error = "<< minVal 
+		<< "\nWorst image: " << imagesName[maxIdx[1]] << " with mean reprojection error = " << maxVal
+		<< "\n\nTotal root mean squared reprojection error = "<< totalRMS 
+		<< "\nBest image: " << imagesName[minSIdx[1]] <<" with root mean squared reprojection error = "<< minSVal 
+		<< "\nWorst image: " << imagesName[maxSIdx[1]] << " with root mean squared reprojection error = " << maxSVal << "\n";
 
+
+	/***********************************************
+	 * Second Part: Undistortion and visualization *
+	 ***********************************************/
 	
 	// Loading and undistortion of an example image
 	cv::Mat distortedImage = cv::imread(distortedImagePath);
@@ -55,11 +72,21 @@ int main(){
 
 
 	// Visualization for comparison of before and after the undistorting procedure image
-	int windowHeight=1024;
-	cv::resize(distortedImage, distortedImage, cv::Size(windowHeight * distortedImage.cols / distortedImage.rows, windowHeight));	
-	cv::resize(undistortedImage, undistortedImage, cv::Size(windowHeight * undistortedImage.cols / undistortedImage.rows, windowHeight));
+	// Values to resize the images to a smaller window, in particular the maximum size will be that of a 720p 16:9 display
+	int windowHeight=720, windowWidth=1280;
+	cv::Size imageResizeValue;
+	if(windowHeight * distortedImage.cols / distortedImage.rows>windowWidth){
+		imageResizeValue = cv::Size(windowWidth,windowWidth * distortedImage.rows / distortedImage.cols);
+	}
+	else{
+		imageResizeValue = cv::Size(windowHeight * distortedImage.cols / distortedImage.rows, windowHeight);
+	}
+
+	cv::resize(distortedImage, distortedImage, imageResizeValue,0,0,cv::INTER_LANCZOS4);	
+	cv::resize(undistortedImage, undistortedImage, imageResizeValue,0,0,cv::INTER_LANCZOS4);
 	cv::imshow("Original", distortedImage);
 	cv::imshow("Undistorted", undistortedImage);
+
 	cv::waitKey(); 
 
 	return 0;
@@ -75,7 +102,7 @@ int main(){
 */
 void findChessboardPoints(cv::String chessboardDirectory, std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints, std::vector<cv::Mat>& chessboardImages, std::vector< cv::String >& imagesName){
     
-	// Estraction 
+	// Searching for all elements in the given folder path
 	std::vector< cv::String >imagesVectorPath;
     cv::glob(chessboardDirectory+"*",imagesVectorPath);
 
@@ -95,8 +122,9 @@ void findChessboardPoints(cv::String chessboardDirectory, std::vector<std::vecto
 		chessboardImagesPoints.push_back(points);
 		chessboardImages.push_back(img);
         imagesName.push_back(imagePath.substr(imagePath.find_last_of("\\")+1));
-		std::cout<<imagesName.back()+"\n";
+		std::cout<<imagesName.back()<<"\n";
     }
+	std::cout<<chessboardImages.size()<<" image containing the chessboard calibration pattern found\n";
 }
 
 
@@ -108,41 +136,72 @@ void findChessboardPoints(cv::String chessboardDirectory, std::vector<std::vecto
 * @param gridMeasure Measure in m of the edge of the chessboard squares
 * @param cameraMatrix Camera matrix
 * @param distCoeffs Vector containing the distortion coefficients [k1 k2 p1 p2 k3]
-* @param MRE Output vector of mean reprojection error per picture
-* @param MRSE Output vector of root mean squared reprojection error per picture
+* @param projectedPoints Vector containing the points of the chessboard projected from 3D world to image plane through the calibration parameters
 */
-void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>> chessboardImagesPoints,cv::Size imageSize, cv::Size gridSize, float gridMeasure,cv::Mat &cameraMatrix, cv::Mat &distCoeffs,std::vector <double>& MRE,std::vector <double>& MRSE){  
+void calibrateCameraChessboard(std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints,cv::Size imageSize, cv::Size gridSize, float gridMeasure,cv::Mat &cameraMatrix, cv::Mat &distCoeffs,std::vector<std::vector<cv::Vec2f>>& projectedPoints){  
 	
 	// Computation of the chessboard pattern in vector form	
 	std::vector<cv::Vec3f> chessboard = chessboard3dPoints(gridSize,gridMeasure);
 
 	// Computation of camera intrinsic and extrinsic parameters and distiortion coefficients	
 	std::vector <cv::Mat> rvecs, tvecs;
-	cv::calibrateCamera(std::vector<std::vector<cv::Vec3f>> (chessboardImagesPoints.size(),chessboard), chessboardImagesPoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs);
+	std::cout<<cv::calibrateCamera(std::vector<std::vector<cv::Vec3f>> (chessboardImagesPoints.size(),chessboard), chessboardImagesPoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs)<<"\n";
 
-    // Computation of mean reprojection errors and root mean squared reprojection errors
-	MRE = std::vector <double> (chessboardImagesPoints.size());
-    MRSE = std::vector <double> (chessboardImagesPoints.size());
-
+	projectedPoints = std::vector<std::vector<cv::Vec2f>> (chessboardImagesPoints.size());
 	for (size_t i = 0; i < chessboardImagesPoints.size(); i++)
 	{
-		std::vector <cv::Vec2f> chessboardReprojected;
-		cv::projectPoints(chessboard, rvecs[i], tvecs[i], cameraMatrix, distCoeffs, chessboardReprojected);
-		
-        double error = 0;
-		for (size_t j = 0; j < chessboardReprojected.size(); j++)
+		cv::projectPoints(chessboard, rvecs[i], tvecs[i], cameraMatrix, distCoeffs, projectedPoints[i]);
+	}
+}
+
+/**
+* Method to compute the mean reprojection errors of a reprojected chessboard
+* @param chessboardImagesPoints Vector containing the points of the chessboard in the image plane for each image
+* @param projectedPoints Vector containing the points of the chessboard projected from 3D world to image plane through the calibration parameters
+* @param MRE Output vector of mean reprojection error per picture 
+* @return Total mean reprojection error 
+*/
+double meanEuclidenReprojectionError(std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints,std::vector<std::vector<cv::Vec2f>>& projectedPoints, std::vector <double>& MRE){  
+	
+    // Computation of mean euclidean reprojection errors
+	MRE = std::vector <double> (chessboardImagesPoints.size());
+    double totalError = 0;
+	for (size_t i = 0; i < chessboardImagesPoints.size(); i++)
+	{
+		double error = 0;
+		for (size_t j = 0; j < chessboardImagesPoints[i].size(); j++)
 		{
-			error += cv::norm(chessboardReprojected[j]- chessboardImagesPoints[i][j]);
+			error += cv::norm(chessboardImagesPoints[i][j]- projectedPoints[i][j]);
 		}
         MRE[i] = error / chessboardImagesPoints[i].size();
-                
-        error = 0;
-		for (size_t j = 0; j < chessboardReprojected.size(); j++)
-		{
-			error += pow(cv::norm(chessboardReprojected[j]- chessboardImagesPoints[i][j]),2);
-		}
-        MRSE[i] = sqrt(error) / chessboardImagesPoints[i].size();      
+        totalError += error;      
 	}
+	return totalError/(chessboardImagesPoints[0].size()*chessboardImagesPoints.size());
+}
+
+/**
+* Method to compute the root mean squared reprojection errors of a reprojected chessboard
+* @param chessboardImagesPoints Vector containing the points of the chessboard in the image plane for each image
+* @param projectedPoints Vector containing the points of the chessboard projected from 3D world to image plane through the calibration parameters
+* @param RMS Output vector of mean squared reprojection errors per picture 
+* @return Total mean squared reprojection errors 
+*/
+double rootMeanSquaredReprojectionError(std::vector<std::vector<cv::Vec2f>>& chessboardImagesPoints,std::vector<std::vector<cv::Vec2f>>& projectedPoints, std::vector <double>& RMS ){  
+	
+    // Computation of root mean squared reprojection errors
+	RMS = std::vector <double> (chessboardImagesPoints.size());
+    double totalError = 0;
+	for (size_t i = 0; i < chessboardImagesPoints.size(); i++)
+	{
+		double error = 0;
+		for (size_t j = 0; j < chessboardImagesPoints[i].size(); j++)
+		{
+			error += cv::pow(cv::norm(chessboardImagesPoints[i][j]- projectedPoints[i][j]),2);
+		}
+        RMS[i] = cv::sqrt(error / chessboardImagesPoints[i].size());
+		totalError += error;      
+	}      
+	return sqrt(totalError/(chessboardImagesPoints[0].size()*chessboardImagesPoints.size()));
 }
 
 /**
@@ -173,10 +232,12 @@ std::vector<cv::Vec3f> chessboard3dPoints(cv::Size gridSize, float gridMeasure){
 * @return Undistorted image
 */
 cv::Mat undistortImage(cv::Mat distortedImage, cv::Mat cameraMatrix, cv::Mat distCoeffs){
-	// Remapping of distorted images
+	
+	// Computation of mapping matrices 
 	cv::Mat mapx, mapy;
 	cv::initUndistortRectifyMap(cameraMatrix, distCoeffs, cv::Mat(), cameraMatrix, distortedImage.size(), CV_32FC1, mapx, mapy);
 	
+	// Remapping of distorted image
 	cv::Mat undistortedImage;
 	cv::remap(distortedImage, undistortedImage, mapx,mapy, cv::INTER_LANCZOS4);
 	return undistortedImage;

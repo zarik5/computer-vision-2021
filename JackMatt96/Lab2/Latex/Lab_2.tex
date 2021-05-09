@@ -4,6 +4,12 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+    }
 
 \newcommand{\cc}{\fontfamily{txtt}\selectfont}
 
@@ -12,37 +18,37 @@
 \begin{document}
 \begin{center}
 \begin{tabular}{c}
-\LARGE{Lab 2}\\
+\LARGE{Computer Vision LAB 2 Report}\\
 \large{Mattia Giacomello}\\
 I.D. 1210988
 \end{tabular}
 \end{center}
 
 \section{Goal}
-The goal is create a script that, from a set of images, extrapolate the chessboard patterned object in every image, calculate the intrinsic parameters and the distortion coefficients of the camera used.
+The goal is create a script that extrapolate the chessboard pattern in the images and computes the camera matrix and the distortion coefficients of the camera used.
 After the computation of these parameters they are used to remap an image, removing the distortions.
 
 \section{Procedure}
-The image set used is self taken and is used a chessboard pattern with 7 corners per row, 6 corners per column and squares with edge size of 3 cm.
+The image set used is  \href{https://drive.google.com/drive/folders/1cFiGnqadNN3DyLFu9KWS6O-nnW64IXOr?usp=sharing}{self taken} and is used a chessboard pattern with 7 corners per row, 6 corners per column and squares with edge size of 3 cm.
 After loading the images, the program search for the chessboard inner corners in each image through the {\cc findChessboardCorners()} OPENCV method, that gives a vector of 2D points in the image plane.
-To calibrate te camera is needed also a 3D reference of the chessboard in the real world, that is created fixing Z=0 and placing the corners on the XY plane with the real measures.
-From these 2 set of points, thanks to the {\cc calibrateCamera()} method, we can obtain the intrinsic parameters as the camera matrix and the distortion coefficients. This method computes also the extrinsic parameters for each image.
+To calibrate the camera is needed also a 3D reference of the chessboard in the real world, that is created fixing Z=0 and placing the corners on the XY plane with the real measures.
+From these 2 set of points, thanks to the {\cc calibrateCamera()} method, we can obtain the camera matrix and the distortion coefficients. 
 To reduce the reprojection error is possible to use the {\cc cornerSubPix()} method that increase the accuracy of the corners position for each image through a 11x11 pixels search window. 
 This value is chosen after some trial and gives a good result lowering the reprojection error.
 If the window is larger the error still lowers but it is a very small change against a large time required.
 The other parameters are the recommended ones since no relevant changes are observed modifying them.\newline
 The obtained results are reported in the table (\ref{Table:values}). 
 Observing the root mean square error is possible to notice that this refinement is useful since there is a relevant change without and with, it is halved in this case.
-The image with the worst RMS is blured due to the focus and this make difficult find the corners, but we can observe that thanks the refinement there is a big improvement.
-The instrinsic matrices are similar, the most significative change is visible in the third column, the offsets.
-The lens distortion coefficients have a more drastic change, as we can see the tangent coefficient $p_1$ even changes sign.\newline
+The image with the worst RMS reported in figure (\ref{figure:worst}) is blured due to the focus and this makes difficult find the corners, but we can observe that thanks the refinement there is a big improvement.
+The camera matrices are similar, with a small change in the third column, the offset.
+What really changes is the distortion coefficients, where the third order coefficient of the radial distortion and the second radial coefficient are halved and the first tangent coefficient even changes sign.\newline
 From the computed instrinsic parameters it si possible to undistort and rectify the images throught the {\cc initUndistortRectifyMap()} and {\cc remap()} methods.
-In particular, the first one gives us 2 maps, one for x and one for y, that specify where a pixel in the distorted image will be mapped in the undistorted one, while the second one take these matrices and applies the effective mapping, giving us the final image.
+In particular, the first one gives us 2 maps, one for x and one for y, that specify the mapping between the distorted and undistroted image's pixels, while the second one take these matrices and applies the effective mapping, giving us the final image.
 Since the image has a low distortion the effect of this remap is not so obvious at first sight.
 Looking at the edges of the picture is visible that there is a change since the pixels are stretched, thanks to the radial distortion correction.
-Moreover the straight lines in the original image are a bit bent while in the remapped image the desk's edge and the chessboard's lines result more straight and the toy cars have more natural proportions.
-In conclusion, the {\cc cornerSubPix()} function is useful to achieve more accuracy after a first, fast, search to improve the precision of the parameters.
-Regarding the remapping, even if the distortion coefficients are low, after the undistorted image is  the overall result is better.
+Moreover the straight lines in the original image are a bit bent while in the remapped image the desk's edge and the chessboard's lines result more straight. The toy cars also have more natural proportions after the processing while in the original image they seam a bit crocked.
+In conclusion, the {\cc cornerSubPix()} function is useful to achieve an higher accuracy after a first, fast, search to improve the precision of the parameters.
+Regarding the remapping, even if the distortion coefficients are low, after the undistortion procedure the image has a more natural look.
 \begin{center}
   \begin{table}[ht]
     \centering
@@ -51,41 +57,59 @@ Regarding the remapping, even if the distortion coefficients are low, after the 
       & w/o {\cc cornerSubPix()} & w {\cc cornerSubPix()}\\
       \hline
       \hline
-      Instrinsic Matrix & 
+      $\begin{matrix}
+        \text{Camera Matrix}\\ 
+        \begin{bmatrix} \alpha_u& 0& u_0\\
+          0& \alpha_v& v_0\\
+          0& 0& 1\end{bmatrix}
+        \end{matrix}$
+       & 
       $ \begin{bmatrix} 2223& 0& 1499\\
         0& 2222& 970.9\\
-        0& 0& 1 \end{bmatrix}$ & 
+        0& 0& 1\end{bmatrix}$ & 
         $ \begin{bmatrix} 2224& 0& 1496\\
           0& 2222& 966.1\\
-          0& 0& 1 \end{bmatrix}$ \\
+          0& 0& 1 \end{bmatrix}$  \\
      \hline
      $\begin{matrix}
-     \text{Distortion Coefficients}\\ \begin{bmatrix}k_1\\ k_2\\ k_3\\ p_1\\ p_2 \end{bmatrix} 
+     \text{Distortion Coefficients}\\ 
+     \begin{bmatrix}k_1\\ k_2\\ k_3\\ p_1\\ p_2 \end{bmatrix} 
      \end{matrix}$ & 
-    $\begin{bmatrix}-0.1537\\ 0.2102\\ -0.1691\\ 0.0002\\ 0.0007\end{bmatrix}$ &
-     $\begin{bmatrix} -0.1449\\ 0.1558\\ -0.0743\\ -0.0003\\0.0004 \end{bmatrix}$ \\
+    $\begin{bmatrix} -153.7\times 10^{-3}\\ 210.2\times 10^{-3}\\ -169.1\times 10^{-3}\\ 215.2\times 10^{-6}\\ 707.3\times 10^{-6}\end{bmatrix}$ &
+     $\begin{bmatrix} -144.9\times 10^{-3}\\ 155.8\times 10^{-3}\\ -74.33\times 10^{-3}\\ -256.5\times 10^{-6}\\362.1\times 10^{-6} \end{bmatrix}$ \\
      \hline
-     RMS & 0.8319& 0.4444\\
+     $\begin{matrix}
+      \text{Euclidean Mean Error}\\ 
+      \text{EMR}
+      \end{matrix}$ & $621.4\times 10^{-3}$& $347.3\times 10^{-3}$\\
      \hline
-     Best Image &   0.3056 & 0.2313\\
+     $\begin{matrix}
+      \text{Root Mean Squared Error}\\ 
+      \text{RMS}
+      \end{matrix}$ & $831.9\times 10^{-3}$& $444.4\times 10^{-3}$\\
      \hline
-     Worst Image &  1.456& 0.9014\\
+     Best Image & $\begin{matrix}\text{EMR=} 266.6\times 10^{-3}\\ \text{RMS=} 305.6\times 10^{-3}\end{matrix}$ & $\begin{matrix}\text{EMR=} 204.6\times 10^{-3}\\ \text{RMS=} 231.3\times 10^{-3}\end{matrix}$\\
      \hline
-    \end{tabular}    
+     Worst Image & $\begin{matrix}\text{EMR=} 1.081\\ \text{RMS=} 1.456\end{matrix}$ & $\begin{matrix}\text{EMR=} 715.9\times 10^{-3}\\ \text{RMS=} 901.3\times 10^{-3}\end{matrix}$\\
+     \hline
+    \end{tabular}
   \caption{Results of calibration procedure with and without the {\cc cornerSubPix()} method.}
   \label{Table:values}
-  \end{table}
+  \end{table}  
+  
   \begin{figure}[ht]
-    \includegraphics[width=\linewidth]{Pictures/Original.jpg}
+    \includegraphics[width=\linewidth]{Pictures/WorstW.jpg}
+    \caption{The worst case in the self taken set}
+    \label{figure:worst}
+  \end{figure}
+  \begin{figure}[ht]
+    \includegraphics[width=\linewidth]{Pictures/OriginalW.jpg}
     \caption{The original distorted image}
   \end{figure}  
   \begin{figure}[ht]
-    \includegraphics[width=\linewidth]{Pictures/Undistorted.jpg}
+    \includegraphics[width=\linewidth]{Pictures/UndistortedW.jpg}
     \caption{The undistorted image}
   \end{figure}
-  \begin{figure}[ht]
-    \includegraphics[width=\linewidth]{Pictures/Worst.jpg}
-    \caption{The worst case in the self taken set}
-  \end{figure}
 \end{center}
+
 \end{document}

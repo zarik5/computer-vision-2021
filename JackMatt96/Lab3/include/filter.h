@@ -1,3 +1,6 @@
+// Giacomello Mattia
+// I.D. 1210988
+
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -39,9 +42,8 @@ protected:
 	// window size
 	int filter_size;
 
-
-
 };
+
 
 
 // Gaussian Filter
@@ -71,6 +73,7 @@ private:
 };
 
 
+
 // Median Filter
 class MedianFilter : public Filter {
 
@@ -83,6 +86,7 @@ public:
 	void doFilter();
 
 };
+
 
 
 // Bilateral Filter
