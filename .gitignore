@@ -16,7 +16,7 @@ build
 *.png
 *.jpeg
 *.jpg
-*.pdf
+*.zip
 *.aux
 *.out
 *.log
