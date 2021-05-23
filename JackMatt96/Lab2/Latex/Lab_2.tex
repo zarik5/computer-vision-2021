@@ -29,7 +29,7 @@ The goal is create a script that extrapolate the chessboard pattern in the image
 After the computation of these parameters they are used to remap an image, removing the distortions.
 
 \section{Procedure}
-The image set used is  \href{https://drive.google.com/drive/folders/1cFiGnqadNN3DyLFu9KWS6O-nnW64IXOr?usp=sharing}{self taken} and is used a chessboard pattern with 7 corners per row, 6 corners per column and squares with edge size of 3 cm.
+The image set used is  \href{https://drive.google.com/file/d/1pfgG-me5uAq6LSIfivCutbsjdKhKwFRb/view?usp=sharing}{self taken} and is used a chessboard pattern with 7 corners per row, 6 corners per column and squares with edge size of 3 cm.
 After loading the images, the program search for the chessboard inner corners in each image through the {\cc findChessboardCorners()} OPENCV method, that gives a vector of 2D points in the image plane.
 To calibrate the camera is needed also a 3D reference of the chessboard in the real world, that is created fixing Z=0 and placing the corners on the XY plane with the real measures.
 From these 2 set of points, thanks to the {\cc calibrateCamera()} method, we can obtain the camera matrix and the distortion coefficients. 
