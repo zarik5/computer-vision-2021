@@ -1,0 +1,63 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{graphicx, rotating}
+\usepackage{multicol, latexsym, amsmath, amssymb}
+\usepackage{blindtext}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{tabu}
+\usepackage{booktabs}% for better rules in the table
+\usepackage{anysize} % Soporte para el comando \marginsize
+\usepackage{hyperref}
+\setlength\parindent{0pt}
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\cc}{\fontfamily{txtt}\selectfont}
+
+\begin{document}
+\begin{center}
+\begin{tabular}{c}
+\LARGE{Computer Vision LAB 5 Report}\\
+\large{Mattia Giacomello}\\
+I.D. 1210988
+\end{tabular}
+\end{center}
+
+\section{Goal}
+The objective of this homework is the creation of a panoramic image given a sequence of images through the implementation of a specialized class {\cc PanoramicImage}.
+\section{Procedure}
+To achieve the goal the first step is to load all the images inside the {\cc PanoramicImage} class through the constructor. The constructor take an additional parameter, the field of view, that is used to compute the cylindrical projection of the image. Having all the images projected on the inside surface of a cylinder, considering that the images were taken rotating the camera, means that we need only to find an horizontal translation between each pair of consecutive images to stitch them together. 
+
+The first step to do so is compute, using SIFT, some keypoints and the relative descriptors. For each pair of consecutive images a brute force matching using the $l_2$ norm between the descriptors is done. Since the number of keypoints found is large, a threshold over the distance is applied: if the ratio between the distance of the actual match and the minimum distance found is greater than a prefixed {\cc ratio} then the match is discarded. If this value is too small if there are some area with similar region, for example the various trees in the Dolomities dataset, there is a chance that in the small number of keypoints kept there are different false positives keypoints and due to the small number of points the resulting translation can be wrong. But, if the ratio is too large, the number of false positive will be extremely high, giving still a wrong translation. After some trial and error the {\cc ratio} is set to 4.5, a value that gives general good results with the provided datasets.
+
+From these matches the translation is computed using the OPENCV method
+
+{\cc findHomography()} with the {\cc RANSAC} flag. Instead of using the homography matrix returned by the method, the mean of the horizontal component of the inliners is computed as the horizontal translation.
+The different images can have some illumination differences so, before the stitching, a histogram equalization is done. The difference between the use or not of histogram equalizaion can be seen in the images (\ref{fig::no_hist}) and (\ref{fig::hist}). Even with the histogram equalization there are some discontinuity between the images but there is a general improvement.
+From the resulting image shown in figure (\ref{fig::dolomities}) we can observe that the stitching is not so perfect, there are misalignments and discontinuities in the illumination between the images that makes clear where the images are stitched together. To improve the procedure maybe it would be a good idea to merge the images where overlap with a distance base weighted sum from the border of the images instead of placing the following image on top of the previous one.
+
+\newpage
+\global\pdfpageattr\expandafter{\the\pdfpageattr/Rotate 90}
+\begin{sidewaysfigure}[ht]
+	\begin{minipage}{\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{Pictures/lab_19_noHist.jpg}
+		\subcaption{"Lab 19 automatic" set without histogram equalizaion}
+		\label{fig::no_hist}
+	\end{minipage}\\
+	\begin{minipage}{\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{Pictures/lab_19_Hist.jpg}
+		\subcaption{"Lab 19 automatic" set with histogram equalizaion}
+		\label{fig::hist}
+	\end{minipage}\\
+	\caption{Comparison of stitching with and without histogram equalization}
+	\begin{minipage}{\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{Pictures/dolomities.jpg}
+	\end{minipage}\\
+	\caption{"Dolomities" set with histogram equalization}
+	\label{fig::dolomities}
+\end{sidewaysfigure}
+\end{document}

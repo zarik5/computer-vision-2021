@@ -1,61 +1,65 @@
 // Giacomello Mattia
 // I.D. 1210988
 
-
-
-#include <iostream>
-#include <opencv2/core.hpp>
 #include <vector>
-#include "PanoramicImage.h"
-#include <opencv2/calib3d.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/features2d.hpp>
-
-using namespace cv;
-using namespace std;
+#include "PanoramicImage.h"
 
 
-String nameSet = "./data/dolomites";
-float fov = 54;
-float Ratio = 3;
-int widthScreen = 1920;
+std::vector<cv::Mat> loadImages(cv::String pattern);
 
-int main()
+/**
+* To test this program are required 2 parameters:
+* argv[1] is the pattern required to load the dataset, for example "..\..\data\dataset_dolomites\dolomites\\*.png"
+* argv[2] is the fov associated to the dataset chosen
+*/
+
+
+int main(int argc, char *argv[])
 {
-	// Selection of all the photos inside the lab folder with bmp extension and costruction of the dataset
-	vector<String> collection;
+
+	cv::String pattern = argv[1];
+	double fov = std::atof(argv[2]);
 	
-	glob(nameSet+"/*", collection);
-	
-	vector<Mat> imageSet;
-	for (String name : collection)
-	{
-		Mat img = imread(name);
-		if (!img.empty()) 
-			imageSet.push_back(img);
-	}
+	// Load of images specified by the user through the program arguments
+	std::vector<cv::Mat> imageSet = loadImages(pattern);
 
 	// Creation of the class PanoramicImage and computation of the merged image
-	PanoramicImage util(imageSet, fov);
-	util.doStitch(Ratio);
-
-	// Obtaining the image stitched and display of the resulting panoramic image
-	Mat output = util.getResult();
-
-	// Saving the panoramic image computed
-	imwrite("Result.png", output);
-	Mat outputResized;
-	resize(output, outputResized, Size(widthScreen, widthScreen * output.rows / output.cols),0,0,INTER_LANCZOS4);
+	PanoramicImage stitcher(imageSet, fov);
+	cv::Mat output = stitcher.doStitch();
 	
-	imshow("Result", outputResized);
+	// Resize ot hte panoramic image for a view fitting the screen
+	int widthScreen = 1920;
+	cv::Mat outputResized;
+	cv::resize(output, outputResized, cv::Size(widthScreen, widthScreen * output.rows / output.cols));
 	
-	
+	cv::imshow("Panoramic Image", outputResized);
 
-	waitKey();
+	cv::waitKey();
 
 }
 
+/**
+* Method used to load the images inside a vector from a patten
+* @param pattern Pattern used to specify where the images
+* @return vector containing the images found
+*/
+std::vector<cv::Mat> loadImages(cv::String pattern)
+{
+	std::vector<cv::String> collection;
+	std::vector<cv::Mat> imageVector;
+	cv::glob(pattern, collection);	
+
+	for (cv::String name : collection)
+	{
+		cv::Mat img = cv::imread(name);
+		if (!img.empty()) 
+			imageVector.push_back(img);
+	}
+
+	return imageVector;
+}
 
  
 

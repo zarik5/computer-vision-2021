@@ -1,60 +1,56 @@
 #include <opencv2/core.hpp>
-#include <opencv2/features2d.hpp>
 #include <vector>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
 #include "panoramic_utils.h"
 
-using namespace cv;
-using namespace std;
 
 class PanoramicImage
 {
 public:
 	/**
 	* Constructor
-	* @param imageSet Container of the Mat that need to be stitched from left to right.
-	* @param fov Field of view
+	* @param imageVector Container of the Mat that need to be stitched from left to right.
+	* @param fov Field of view used to take the images
 	*/
-	PanoramicImage(vector<Mat> imageSet, float fov);
+	PanoramicImage(std::vector<cv::Mat> imageVector, double fov);
 	
 	/**
-	* Add Mat to the dataset passed in the constructor, the new images are attached at the right 
-	* @param imageSet Container of Mat
+	* Add Mat to the dataset passed in the constructor, the new image is attached at the right 
+	* @param image image to add to the vector inside the class
 	*/
-	void addImages(vector<Mat> imageSet);
+	void addImage(cv::Mat imageSet);
 	
 	/**
 	* Retrieve the field of view passed in the constructor
 	* @return Field of view
 	*/
-	float getFov();
+	double getFov();
 	
 	/**
-	* Compute the merge of the photos
+	* Compute the merge of the photos stored inside the class
 	* @param ratio Value that
-	* @param orbPoints Keypoints required at the ORB feature detector
 	* @param maxRansacIter Maximum number of iteration for the RANSAC estimator
 	* @param thresholdRansac Threshold for the RANSAC estimator
+	* @return Panoramic photo
 	*/
-	void doStitch(float ratio = 3, int orbPoints = 5000, int maxRansacIter = 50, int thresholdRansac = 3);
+	cv::Mat doStitch(double ratio = 4.5, int maxRansacIter = 50, double thresholdRansac = 3);
 	
 	/**
 	* Retrieve the panorama computed after the merge
 	* @return Panoramic photo
 	*/
-	Mat getResult();
+	cv::Mat getResult();
 
 	/**
 	* Retrieve the images given to the constructor after the cylindrical projection
 	* @return Dataset cylindrically projected
 	*/
-	vector<Mat> getDataset();
-
+	std::vector<cv::Mat> getCylindricalDataset();
+	
 
 private:
-	vector<Mat> dataset;
-	float angle;
-	Mat output;
+	cv::Mat PanoramicImage::merge(std::vector<int> imagesPosition);
+	
+	std::vector<cv::Mat> dataset;
+	double fov;
+	cv::Mat output;
 };

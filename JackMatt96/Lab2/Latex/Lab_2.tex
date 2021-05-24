@@ -29,7 +29,7 @@ The goal is create a script that extrapolate the chessboard pattern in the image
 After the computation of these parameters they are used to remap an image, removing the distortions.
 
 \section{Procedure}
-The image set used is  \href{https://drive.google.com/file/d/1pfgG-me5uAq6LSIfivCutbsjdKhKwFRb/view?usp=sharing}{self taken} and is used a chessboard pattern with 7 corners per row, 6 corners per column and squares with edge size of 3 cm.
+The image set used is  \href{https://drive.google.com/file/d/1pfgG-me5uAq6LSIfivCutbsjdKhKwFRb/view?usp=sharing}{self taken} and is used a chessboard pattern with 7 corners per row, 5 corners per column and squares with edge size of 3 cm.
 After loading the images, the program search for the chessboard inner corners in each image through the {\cc findChessboardCorners()} OPENCV method, that gives a vector of 2D points in the image plane.
 To calibrate the camera is needed also a 3D reference of the chessboard in the real world, that is created fixing Z=0 and placing the corners on the XY plane with the real measures.
 From these 2 set of points, thanks to the {\cc calibrateCamera()} method, we can obtain the camera matrix and the distortion coefficients. 
@@ -41,7 +41,7 @@ The obtained results are reported in the table (\ref{Table:values}).
 Observing the root mean square error is possible to notice that this refinement is useful since there is a relevant change without and with, it is halved in this case.
 The image with the worst RMS reported in figure (\ref{figure:worst}) is blured due to the focus and this makes difficult find the corners, but we can observe that thanks the refinement there is a big improvement.
 The camera matrices are similar, with a small change in the third column, the offset.
-What really changes is the distortion coefficients, where the third order coefficient of the radial distortion and the second radial coefficient are halved and the first tangent coefficient even changes sign.\newline
+What really changes is the distortion coefficients, where the third coefficient of the radial distortion and the second tangent coefficient are halved and the first tangent coefficient even changes sign.\newline
 From the computed instrinsic parameters it si possible to undistort and rectify the images throught the {\cc initUndistortRectifyMap()} and {\cc remap()} methods.
 In particular, the first one gives us 2 maps, one for x and one for y, that specify the mapping between the distorted and undistroted image's pixels, while the second one take these matrices and applies the effective mapping, giving us the final image.
 Since the image has a low distortion the effect of this remap is not so obvious at first sight.
@@ -59,8 +59,8 @@ Regarding the remapping, even if the distortion coefficients are low, after the 
       \hline
       $\begin{matrix}
         \text{Camera Matrix}\\ 
-        \begin{bmatrix} \alpha_u& 0& u_0\\
-          0& \alpha_v& v_0\\
+        \begin{bmatrix} \alpha_u& 0& u_c\\
+          0& \alpha_v& v_c\\
           0& 0& 1\end{bmatrix}
         \end{matrix}$
        & 

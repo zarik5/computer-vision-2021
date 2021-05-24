@@ -5,134 +5,128 @@
 #include "PanoramicImage.h"
 
 
-PanoramicImage::PanoramicImage(vector<Mat> imageSet, float fov)
+PanoramicImage::PanoramicImage(std::vector<cv::Mat> imageVector, double fov)
 {
-	angle = fov / 2;
-	for (Mat img : imageSet)
-	{
-		dataset.push_back(PanoramicUtils::cylindricalProj(img, angle));
-	}
-}
-
-void PanoramicImage::addImages(vector<Mat> imageSet)
-{
-	for (Mat img : imageSet)
-	{
-		dataset.push_back(PanoramicUtils::cylindricalProj(img, angle));
-	}
-}
-
-float PanoramicImage::getFov()
-{
-	return angle*2;
-}
-
-void PanoramicImage::doStitch(float ratio, int orbPoints, int maxRansacIter, int thresholdRansac)
-{
-	vector < vector<KeyPoint>> keypoints;
-	vector<Mat> descriptors;
+	this->fov = fov;
 	
-	// Cration of the ORB descriptor and of the brute force matcher with hamming norm. For better result is activated the cross check
-	Ptr <ORB> orb = ORB::create(orbPoints);
-	Ptr <BFMatcher> matcher = BFMatcher::create(NORM_HAMMING, true);
+	dataset.reserve(imageVector.size());
+
+	double angle = fov/2;
+
+	for(auto image: imageVector)
+	{
+		dataset.push_back(PanoramicUtils::cylindricalProj(image,angle));
+	}
+
+	output = cv::Mat();
+}
+
+
+
+void PanoramicImage::addImage(cv::Mat image)
+{
+	dataset.push_back(PanoramicUtils::cylindricalProj(image,fov/2));
+}
+
+
+
+double PanoramicImage::getFov()
+{
+	return fov;
+}
+
+
+
+cv::Mat PanoramicImage::doStitch(double ratio, int maxRansacIter, double thresholdRansac)
+{
+	
+	
+	// Cration of the SIFT feature extractor and brute force matcher with l2 norm
+	cv::Ptr <cv::SIFT> sift = cv::SIFT::create(5000);
+	cv::Ptr <cv::BFMatcher> matcher = cv::BFMatcher::create(cv::NORM_L2);
 
 	// Computation of all the keypoints and the relative descriptors
-	orb->detect(dataset, keypoints);
-	orb->compute(dataset, keypoints, descriptors);
+	std::vector <std::vector<cv::KeyPoint>> keypoints;
+	std::vector<cv::Mat> descriptors;
 
-	// Setting the translation of the first image
-	vector<Point2d> translations(dataset.size());
-	translations[0] = Point2d(0, 0);
+	sift->detect(dataset, keypoints);
+	sift->compute(dataset, keypoints, descriptors);
 
-	int ymin = 0, ymax = 0;
+	std::vector<int> imagesPosition(dataset.size());	
+	// Setting the position of the first image as the left margin image
+	imagesPosition[0] = 0;
 
-	for (size_t i = 1; i < keypoints.size(); i++)
+	for (int i = 1; i < dataset.size(); i++)
 	{
-		// Match of the orb feature found between two consective images
-		vector<DMatch> matches;
-		matcher->match(descriptors[i], descriptors[i - 1], matches);
+		// Computation of the brute force matches between two consecutive images
+		std::vector<cv::DMatch> matchesFound;
+		matcher->match(descriptors[i],descriptors[i-1],matchesFound);
 
-		// Sorting of the matches by the hamming distance selection of the best by an upper limit
-		sort(matches.begin(), matches.end());
-		float upper = matches[0].distance * ratio;
-		size_t j = 0;
-
-		vector<Point2d> pointsDxy;
-
-		while ((j < matches.size()) && (matches[j].distance <= upper))
+		// Matches refining using an upper bound in the distance computed as minimum distance times a constant
+		double min = matchesFound[0].distance;
+		for (int j = 0; j < matchesFound.size(); j++)
 		{
-			// Computation of the distance between the positions of the matching points in the images
-			Point2d point = keypoints[i - 1][matches[j].trainIdx].pt - keypoints[i][matches[j].queryIdx].pt;
-			pointsDxy.push_back(point);
-			j++;
+			if(matchesFound[j].distance<min)
+				min = matchesFound[j].distance;
 		}
+		double upperBound = min * ratio;
 
-
-		// RANSAC made to retrieve the translation between the keypoints.
-		Point2d best;
-		int bestCount = 0;
-		for (size_t iter = 0; iter < maxRansacIter; iter++)
+		// Extraction of the points that have low distances
+		std::vector<cv::Point2f> leftPoints, rightPoints;
+		for(int j=1; j < matchesFound.size();j++)
 		{
-			size_t index = rand() % pointsDxy.size();
-			int count = 0;
-			for (Point2d point : pointsDxy)
+			if(matchesFound[j].distance<upperBound)
 			{
-				// Counting of the inliers
-				if (abs(point.x - pointsDxy[index].x) + abs(point.y - pointsDxy[index].y) < thresholdRansac)
-					count++;
-			}
-
-			// Updating the best model in case of higher number of inliers
-			if (count > bestCount)
-			{
-				best = pointsDxy[index];
-				bestCount = count;
+				// Computation of the distance between the positions of the matching points in the images
+				rightPoints.push_back(keypoints[i - 1][matchesFound[j].trainIdx].pt);
+				leftPoints.push_back(keypoints[i][matchesFound[j].queryIdx].pt);
 			}
 		}
 
-		// Computation of the translation
-		Point2d d(0, 0);
-		for (Point2d point : pointsDxy)
+		// Computation of translation using the inliners given by the RANSAC procedure done inside the findHomography method
+		std::vector<uchar> goodMatches;
+		cv::findHomography(rightPoints,leftPoints,cv::RANSAC,thresholdRansac,goodMatches,maxRansacIter);
+
+		double sumOfDelta = 0; 
+		int counter = 0;
+		for(int j = 0; j<rightPoints.size();j++)
 		{
-			if (abs(point.x - best.x) + abs(point.y - best.y) < thresholdRansac)
+			if(goodMatches[j])
 			{
-				d += point;
+				sumOfDelta += rightPoints[j].x-leftPoints[j].x;
+				counter++;
 			}
 		}
 
-		translations[i] = translations[i - 1] + d / bestCount;
-		
-		// Since moving vertically the images creates black areas the minimum and maximum translations are needed afterwards
-		if (translations[i].y < ymin)
-			ymin = translations[i].y;
-		else
-			if (translations[i].y > ymax)
-				ymax = translations[i].y;
+		// Computation of the position of the image
+		imagesPosition[i] = imagesPosition[i-1] + int(sumOfDelta/counter);		
+
 	}
 
-	// Creation of a temporary image with the black areas. The minimum vertical translation is used as bias to avoid negative index
-	Mat out(dataset.back().rows+(ymax-ymin), dataset.back().cols + translations.back().x, dataset.back().type());
-
-	// Merge of the images by the translations obtained previously
-	for (size_t i = 0; i < dataset.size(); i++)
+	// Computation of the output size of the output image and stitch of the images with the correct translation 
+	output = cv::Mat(dataset.back().rows, dataset.back().cols + imagesPosition.back(), dataset.back().type());
+	for (int i = 0; i < dataset.size(); i++)
 	{
-		dataset[i].copyTo(out(Rect(translations[i].x, translations[i].y - ymin, dataset[i].cols, dataset[i].rows)));
+		// To obtain a better result before the stitching is done a histogram equalization 
+		cv::Mat temp;
+		cv::equalizeHist(dataset[i],temp);
+		cv::Mat areaToCopy = output.colRange(imagesPosition[i], imagesPosition[i]+dataset[i].cols);
+		temp.copyTo(areaToCopy);
 	}
 
-	// Computing the resulting image removing the black spots. The upper limits is the maximum translation unbiased and the height of the image is the height of a single image minus the maximum translation
-	out(Rect(0, ymax - ymin, out.cols, dataset.back().rows - ymax)).copyTo(output);
-
+	return output;
 }
 
-Mat PanoramicImage::getResult()
+
+
+cv::Mat PanoramicImage::getResult()
 {
 	return output;
 }
 
-vector<Mat> PanoramicImage::getDataset()
+
+
+std::vector<cv::Mat> PanoramicImage::getCylindricalDataset()
 {
 	return dataset;
 }
-
-
-

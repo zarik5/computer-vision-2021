@@ -20,7 +20,7 @@ cv::Mat undistortImage(cv::Mat , cv::Mat , cv::Mat );
 
 cv::Size gridCorners(7,5); // Internal corners of the chessboard
 float gridMeasure = 0.03; // Chessboard edge in m 
-cv::String chessboardDirectoryPath = "../../data/*.jpg"; // Directory path of the chessboard calibation images
+cv::String chessboardDirectoryPath = "..\\..\\data\\"; // Directory path of the chessboard calibation images
 std::string distortedImagePath = "..\\..\\data\\_DSC6070.jpg"; // Path of the image to undistort
 // The self taken dataset here used can be retrieved from the link in the report
 
