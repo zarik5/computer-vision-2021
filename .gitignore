@@ -22,3 +22,4 @@ build
 *.log
 *.synctex.gz
 .vs
+.DS_Store
