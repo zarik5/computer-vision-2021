@@ -1,0 +1,16 @@
+
+cmake_minimum_required (VERSION 3.8)
+set(CMAKE_CXX_STANDARD 17)
+
+project (final_project LANGUAGES CXX)
+
+find_package(OpenCV REQUIRED)
+
+include_directories(
+    include
+    ${OpenCV_INCLUDE_DIRS}
+)
+
+add_executable(${PROJECT_NAME} src/main.cpp src/boat_detection.cpp src/sea_segmentation.cpp)
+
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})

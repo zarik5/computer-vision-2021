@@ -1,1 +1,0 @@
-sudo apt update && sudo apt -y upgrade && sudo apt install -y build-essential cmake libopencv-dev kali-win-kex
