@@ -1,10 +1,16 @@
 {
     "configurations": [
         {
-            "name": "windows",
+            "name": "macos",
             "includePath": [
-                "../opencv/include"
-            ]
+                "/opt/homebrew/Cellar/eigen/3.3.9/include/eigen3",
+                "/opt/homebrew/Cellar/opencv/4.5.2_4/include/opencv4",
+                "/opt/homebrew/Cellar/nlohmann-json/3.9.1_1/include",
+                "${workspaceFolder}/final_project/include",
+                "${workspaceFolder}/final_project/libs/include"
+            ],
+            "cppStandard": "c++17",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

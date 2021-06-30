@@ -100,6 +100,15 @@
         "string_view": "cpp",
         "*.tcc": "cpp",
         "memory_resource": "cpp",
-        "cinttypes": "cpp"
-    }
+        "cinttypes": "cpp",
+        "forward_list": "cpp",
+        "future": "cpp",
+        "unordered_set": "cpp",
+        "valarray": "cpp",
+        "typeindex": "cpp",
+        "variant": "cpp"
+    },
+    "python.pythonPath": "/Users/ric/miniforge3/envs/cv/bin/python",
+    "cmake.sourceDirectory": "${workspaceFolder}/final_project",
+    "cmake.configureOnOpen": true
 }

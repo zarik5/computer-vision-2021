@@ -5,10 +5,12 @@
 #include "sea_segmentation.h"
 
 const std::string HELP_MESSAGE = R"help(
-USAGE:
-<executable> <step> [<step args>]
+final_project: detect boats or segment the sea in an image
 
-STEPS:  boat_train | boat_detect | sea_preproc | sea_segment
+USAGE:
+final_project <step> [<step args>]
+
+STEPS: boat_train | boat_detect | sea_prep_data | sea_segment
 You can read help messages for each step by typing `<executable> <step>`.
 
 )help";
@@ -25,7 +27,7 @@ int main(int argc, char *argv[]) {
             boat_detection::train(arguments);
         } else if (step == "boat_detect") {
             boat_detection::detect(arguments);
-        } else if (step == "sea_preproc") {
+        } else if (step == "sea_prep_data") {
             sea_segmentation::prepare_dataset(arguments);
         } else if (step == "sea_segment") {
             sea_segmentation::segment(arguments);
@@ -35,4 +37,6 @@ int main(int argc, char *argv[]) {
     } else {
         std::cout << HELP_MESSAGE;
     }
+
+    std::cout << std::endl << "Done" << std::endl;
 }
