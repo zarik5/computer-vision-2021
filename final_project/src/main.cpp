@@ -1,42 +1,29 @@
 #include <iostream>
 #include <vector>
 
-#include "boat_detection.h"
-#include "sea_segmentation.h"
-
-const std::string HELP_MESSAGE = R"help(
-final_project: detect boats or segment the sea in an image
-
-USAGE:
-final_project <step> [<step args>]
-
-STEPS: boat_train | boat_detect | sea_prep_data | sea_segment
-You can read help messages for each step by typing `<executable> <step>`.
-
-)help";
+#include <boat_detection.h>
 
 int main(int argc, char *argv[]) {
-    if (argc >= 2) {
-        std::string step = argv[1];
-        std::vector<std::string> arguments;
-        for (int i = 2; i < argc; i++) {
-            arguments.push_back(argv[i]);
+
+    //    boat_detection::train(arguments[2],arguments[3]);
+    std::vector<cv::String> image_names;
+
+    cv::glob("D:\\Desktop\\Project Jack-Rick - Copia (4) - "
+             "Copia\\data\\FINAL_DATASET\\TEST_DATASET\\kaggle\\*",
+             image_names);
+    BoatDetector boatFinder("D:\\Desktop\\Project Jack-Rick\\mlp.xml",
+                            "D:\\Desktop\\Project Jack-Rick\\vocabulary.tiff");
+
+    for (int i = image_names.size(); i < image_names.size(); i++) {
+        cv::String image_name = image_names[i];
+        cv::Mat image = cv::imread(image_name);
+        std::vector<cv::Rect> shipsFoundMlp = boatFinder.detectBoats(image, 100);
+        for (cv::Rect rect : shipsFoundMlp) {
+            cv::rectangle(image, rect, cv::Scalar(0, 0, 255), 3);
         }
 
-        if (step == "boat_train") {
-            boat_detection::train(arguments);
-        } else if (step == "boat_detect") {
-            boat_detection::detect(arguments);
-        } else if (step == "sea_prep_data") {
-            sea_segmentation::prepare_dataset(arguments);
-        } else if (step == "sea_segment") {
-            sea_segmentation::segment(arguments);
-        } else {
-            std::cout << HELP_MESSAGE;
-        }
-    } else {
-        std::cout << HELP_MESSAGE;
+        cv::imshow("Segmentation KDRP", image);
+        cv::waitKey();
     }
-
     std::cout << std::endl << "Done" << std::endl;
 }
