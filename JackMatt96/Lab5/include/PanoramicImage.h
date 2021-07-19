@@ -1,3 +1,6 @@
+// Giacomello Mattia
+// I.D. 1210988
+
 #include <opencv2/core.hpp>
 #include <vector>
 #include "panoramic_utils.h"
@@ -17,7 +20,7 @@ public:
 	* Add Mat to the dataset passed in the constructor, the new image is attached at the right 
 	* @param image image to add to the vector inside the class
 	*/
-	void addImage(cv::Mat imageSet);
+	void addImage(cv::Mat image);
 	
 	/**
 	* Retrieve the field of view passed in the constructor
@@ -27,12 +30,10 @@ public:
 	
 	/**
 	* Compute the merge of the photos stored inside the class
-	* @param ratio Value that
-	* @param maxRansacIter Maximum number of iteration for the RANSAC estimator
-	* @param thresholdRansac Threshold for the RANSAC estimator
+	* @param ratio Value used to refine the matches selection
 	* @return Panoramic photo
 	*/
-	cv::Mat doStitch(double ratio = 4.5, int maxRansacIter = 50, double thresholdRansac = 3);
+	cv::Mat doStitch(double ratio = 4.5);
 	
 	/**
 	* Retrieve the panorama computed after the merge
@@ -47,9 +48,8 @@ public:
 	std::vector<cv::Mat> getCylindricalDataset();
 	
 
-private:
-	cv::Mat PanoramicImage::merge(std::vector<int> imagesPosition);
-	
+private:	
+
 	std::vector<cv::Mat> dataset;
 	double fov;
 	cv::Mat output;

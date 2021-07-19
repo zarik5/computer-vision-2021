@@ -1,7 +1,6 @@
 // Giacomello Mattia
 // I.D. 1210988
 
-
 #include "PanoramicImage.h"
 
 
@@ -37,10 +36,8 @@ double PanoramicImage::getFov()
 
 
 
-cv::Mat PanoramicImage::doStitch(double ratio, int maxRansacIter, double thresholdRansac)
+cv::Mat PanoramicImage::doStitch(double ratio)
 {
-	
-	
 	// Cration of the SIFT feature extractor and brute force matcher with l2 norm
 	cv::Ptr <cv::SIFT> sift = cv::SIFT::create(5000);
 	cv::Ptr <cv::BFMatcher> matcher = cv::BFMatcher::create(cv::NORM_L2);
@@ -48,7 +45,6 @@ cv::Mat PanoramicImage::doStitch(double ratio, int maxRansacIter, double thresho
 	// Computation of all the keypoints and the relative descriptors
 	std::vector <std::vector<cv::KeyPoint>> keypoints;
 	std::vector<cv::Mat> descriptors;
-
 	sift->detect(dataset, keypoints);
 	sift->compute(dataset, keypoints, descriptors);
 
@@ -70,7 +66,7 @@ cv::Mat PanoramicImage::doStitch(double ratio, int maxRansacIter, double thresho
 				min = matchesFound[j].distance;
 		}
 		double upperBound = min * ratio;
-
+		
 		// Extraction of the points that have low distances
 		std::vector<cv::Point2f> leftPoints, rightPoints;
 		for(int j=1; j < matchesFound.size();j++)
@@ -82,10 +78,9 @@ cv::Mat PanoramicImage::doStitch(double ratio, int maxRansacIter, double thresho
 				leftPoints.push_back(keypoints[i][matchesFound[j].queryIdx].pt);
 			}
 		}
-
 		// Computation of translation using the inliners given by the RANSAC procedure done inside the findHomography method
 		std::vector<uchar> goodMatches;
-		cv::findHomography(rightPoints,leftPoints,cv::RANSAC,thresholdRansac,goodMatches,maxRansacIter);
+		cv::findHomography(rightPoints, leftPoints, goodMatches ,cv::RANSAC);
 
 		double sumOfDelta = 0; 
 		int counter = 0;
@@ -97,10 +92,8 @@ cv::Mat PanoramicImage::doStitch(double ratio, int maxRansacIter, double thresho
 				counter++;
 			}
 		}
-
 		// Computation of the position of the image
 		imagesPosition[i] = imagesPosition[i-1] + int(sumOfDelta/counter);		
-
 	}
 
 	// Computation of the output size of the output image and stitch of the images with the correct translation 
