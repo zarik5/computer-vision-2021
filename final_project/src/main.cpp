@@ -4,26 +4,29 @@
 #include <boat_detection.h>
 
 int main(int argc, char *argv[]) {
+    BoatDetector boatFinder;
+    if (argv[1] == "Training") {
+        boatFinder.train(argv[2], argv[3]);
 
-    //    boat_detection::train(arguments[2],arguments[3]);
-    std::vector<cv::String> image_names;
+        boatFinder.save(".\\HoggSVR.xml");
+    } else {
+        std::vector<cv::String> image_names;
+        cv::glob(argv[3], image_names);
 
-    cv::glob("D:\\Desktop\\Project Jack-Rick - Copia (4) - "
-             "Copia\\data\\FINAL_DATASET\\TEST_DATASET\\kaggle\\*",
-             image_names);
-    BoatDetector boatFinder("D:\\Desktop\\Project Jack-Rick\\mlp.xml",
-                            "D:\\Desktop\\Project Jack-Rick\\vocabulary.tiff");
+        for (cv::String image_name : image_names) {
 
-    for (int i = image_names.size(); i < image_names.size(); i++) {
-        cv::String image_name = image_names[i];
-        cv::Mat image = cv::imread(image_name);
-        std::vector<cv::Rect> shipsFoundMlp = boatFinder.detectBoats(image, 100);
-        for (cv::Rect rect : shipsFoundMlp) {
-            cv::rectangle(image, rect, cv::Scalar(0, 0, 255), 3);
+            cv::Mat image = cv::imread(image_name);
+            std::vector<cv::Rect> ships_found = boatFinder.detectBoats(image);
+
+            cv::RNG rng(time(0));
+            for (cv::Rect rect : ships_found) {
+                cv::rectangle(image, rect, cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 3);
+            }
+            cv::imshow("Boats found: " + std::to_string(ships_found.size()), image);
+
+            cv::waitKey();
         }
-
-        cv::imshow("Segmentation KDRP", image);
-        cv::waitKey();
     }
+
     std::cout << std::endl << "Done" << std::endl;
 }

@@ -13,36 +13,39 @@
 #include <opencv2/ximgproc.hpp>
 #include <vector>
 
-class BoatDetector {
+class BoatDetector
+{
 
-  public:
-    BoatDetector(cv::String MLP_xml_file, cv::String BoW_mat_file);
-    BoatDetector();
-    void train(cv::String images_folder, cv::String ground_truth_folder, int histogram_clusters);
+public:
+  BoatDetector(cv::String HOG_xml_file);
+  BoatDetector();
+  void train(cv::String images_folder,
+             cv::String ground_truth_folder);
 
-    void save(cv::String BoW_mat_file, cv::String MLP_xml_file);
-    void load(cv::String BoW_mat_file, cv::String MLP_xml_file);
+  void save(cv::String HOG_xml_file);
+  void load(cv::String HOG_xml_file);
 
-    std::vector<cv::Rect> detectBoats(cv::Mat input_img, int proposed_regions);
-    std::vector<cv::Rect> segmentationKDRP(cv::Mat img, int proposed_regions);
+  std::vector<cv::Rect> detectBoats(cv::Mat input_img);
 
-    std::vector<cv::Rect> NMS(std::vector<cv::Rect> ships, std::vector<float> probabilities);
+  std::vector<cv::Rect> NMS(std::vector<cv::Rect> ships,
+                            std::vector<double> probabilities);
 
-    float testResult(std::vector<cv::Rect> found_boats, std::vector<cv::Rect> gound_truths);
+private:
+  void loadImages(cv::String images_folder,
+                  cv::String ground_truth_folder,
+                  std::vector<cv::Mat> &training_images,
+                  std::vector<std::vector<cv::Rect>> &positive_labels);
 
-  private:
-    void loadImages(cv::String images_folder, cv::String ground_truth_folder,
-                    std::vector<cv::Mat> &training_images,
-                    std::vector<std::vector<cv::Rect>> &positive_labels);
+  void randomNegatives(std::vector<cv::Mat> training_images,
+                       std::vector<std::vector<cv::Rect>> positive_rects,
+                       cv::Mat& training_HOGs);
 
-    void negativeMining(std::vector<cv::Mat> training_images,
-                        std::vector<std::vector<cv::Rect>> positive_labels,
-                        std::vector<std::vector<cv::Rect>> &negative_labels);
+  void mineNegatives(cv::Mat training_image,
+                     std::vector<cv::Rect> gound_truths,
+                     std::vector<cv::Rect> found_boats,
+                     cv::Mat &training_HOGs);
+  void SVM_to_HOG_converter(cv::Ptr<cv::ml::SVM> SVM);
 
-    int histogram_clusters;
-    float threshold_IoU = 0.1;
-    cv::Ptr<cv::ml::SVM> svm;
-    cv::Ptr<cv::ml::ANN_MLP> mlp;
-    cv::Ptr<cv::FeatureDetector> detector;
-    cv::Ptr<cv::BOWImgDescriptorExtractor> bow;
+  float threshold_IoU = 0.1;
+  cv::Ptr<cv::HOGDescriptor> HOG_descriptor;
 };
