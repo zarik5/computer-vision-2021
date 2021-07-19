@@ -20,6 +20,41 @@ python sea_segmentation.py <in_dataset_dir> <out_model_path>
 """
 
 
+def load_images_tensor(names):
+    tensors = []
+    for name in names:
+        image = preproc.image.load_img(name, color_mode="rgb")
+
+        tensors.append(
+            preproc.image.img_to_array(
+                image,
+                dtype="float32",
+                data_format="channels_last",
+            )
+        )
+
+    return np.stack(tensors) / 255
+
+
+def get_input_batch(dir, file_name_prefixes):
+    inputs = []
+
+    inputs.append(
+        load_images_tensor(
+            [f"{dir}/{prefix}_focus.png" for prefix in file_name_prefixes]
+        )
+    )
+
+    for i in range(CONTEXT_LEVELS_COUNT):
+        inputs.append(
+            load_images_tensor(
+                [f"{dir}/{prefix}_context_{i}.png" for prefix in file_name_prefixes]
+            )
+        )
+
+    return inputs
+
+
 class Dataset(keras.utils.Sequence):
     def __init__(self, dataset_dir):
         classes_file = open(dataset_dir + "/classes.txt", "r")
@@ -29,23 +64,6 @@ class Dataset(keras.utils.Sequence):
 
     def __len__(self):
         return int(len(self.names_and_classes) / BATCH_SIZE)
-
-    def load_images_tensor(self, names):
-        tensors = []
-        for name in names:
-            image = preproc.image.load_img(
-                f"{self.dataset_dir}/{name}.png", color_mode="rgb"
-            )
-
-            tensors.append(
-                preproc.image.img_to_array(
-                    image,
-                    dtype="float32",
-                    data_format="channels_last",
-                )
-            )
-
-        return np.stack(tensors) / 255
 
     def __getitem__(self, idx):
         # At the beginning of an epoch, shuffle the entries. Keras can already do this between
@@ -57,16 +75,10 @@ class Dataset(keras.utils.Sequence):
         names = [pair[0] for pair in pairs]
         classes = [pair[1] for pair in pairs]
 
-        inputs = []
+        inputs = get_input_batch(self.dataset_dir, names)
+        outputs = np.array(classes).astype(np.float)
 
-        inputs.append(self.load_images_tensor([f"{name}_focus" for name in names]))
-
-        for i in range(CONTEXT_LEVELS_COUNT):
-            inputs.append(
-                self.load_images_tensor([f"{name}_context_{i}" for name in names])
-            )
-
-        return (inputs, np.array(classes).astype(np.float))
+        return (inputs, outputs)
 
 
 def model():
@@ -132,7 +144,7 @@ def model():
     return model
 
 
-def main():
+def train():
     if len(sys.argv) != 3:
         print(HELP_MESSAGE)
         return
@@ -161,5 +173,33 @@ def main():
     compiled_model.save(model_path, include_optimizer=False)
 
 
+def classify():
+    # if len(sys.argv) != 3:
+    #     print(HELP_MESSAGE)
+    #     return
+
+    model = keras.models.load_model("out/model.h5")
+
+    dimensions_file = open("out/00/dimensions.txt", "r")
+    image_shape = np.array(dimensions_file.readlines(), dtype="int")
+
+    pixels_total = image_shape[0] * image_shape[1]
+
+    segmentation_file = open("out/00/segmentation", "wb")
+
+    index = 0
+    while index < pixels_total:
+        print("Progress:", int(index * 100 / pixels_total), "%")
+        
+        batch_size = min(BATCH_SIZE, pixels_total - index)
+
+        input_batch = get_input_batch("out/00", range(index, index + batch_size))
+
+        batch_prediction = model.predict(input_batch)
+        segmentation_file.write(batch_prediction.tobytes())
+
+        index += batch_size
+
+
 if __name__ == "__main__":
-    main()
+    classify()

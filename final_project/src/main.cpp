@@ -29,8 +29,10 @@ int main(int argc, char *argv[]) {
             boat_detection::detect(arguments);
         } else if (step == "sea_prep_data") {
             sea_segmentation::prepare_dataset(arguments);
-        } else if (step == "sea_segment") {
-            sea_segmentation::segment(arguments);
+        } else if (step == "sea_prep_image") {
+            sea_segmentation::prepare_image(arguments);
+        } else if (step == "sea_show_segm") {
+            sea_segmentation::show_segmentation(arguments);
         } else {
             std::cout << HELP_MESSAGE;
         }
