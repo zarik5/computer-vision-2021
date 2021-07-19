@@ -7,8 +7,7 @@ int main(int argc, char *argv[]) {
     BoatDetector boatFinder;
     if (argv[1] == "Training") {
         boatFinder.train(argv[2], argv[3]);
-
-        boatFinder.save(".\\HoggSVR.xml");
+        boatFinder.save(".\\HOG_Params.xml");
     } else {
         std::vector<cv::String> image_names;
         cv::glob(argv[3], image_names);
@@ -22,8 +21,8 @@ int main(int argc, char *argv[]) {
             for (cv::Rect rect : ships_found) {
                 cv::rectangle(image, rect, cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 3);
             }
-            cv::imshow("Boats found: " + std::to_string(ships_found.size()), image);
 
+            cv::imshow("Boats found: " + std::to_string(ships_found.size()), image);
             cv::waitKey();
         }
     }

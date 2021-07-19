@@ -35,6 +35,10 @@ private:
                   cv::String ground_truth_folder,
                   std::vector<cv::Mat> &training_images,
                   std::vector<std::vector<cv::Rect>> &positive_labels);
+                  
+  void positiveExtraction(std::vector<cv::Mat> training_images,
+                          std::vector<std::vector<cv::Rect>> positive_rects,
+                          cv::Mat &training_HOGs);
 
   void randomNegatives(std::vector<cv::Mat> training_images,
                        std::vector<std::vector<cv::Rect>> positive_rects,
