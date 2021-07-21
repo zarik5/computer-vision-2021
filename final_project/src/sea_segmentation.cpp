@@ -1,14 +1,13 @@
 #include "sea_segmentation.h"
 
-#include "fdeep/fdeep.hpp"
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <random>
 
 const float TRAIN_SPLIT_PROPORTION = 0.9;
-
-const int TOTAL_IMAGES_COUNT = 5000;
 
 const int FOCUS_WIN_SIDE = 9;
 const int SCALES_COUNT = 4;
@@ -37,7 +36,21 @@ FLAG:
 display: Show the segmentation result in a window before closing the program
 )help";
 
-struct PixelWindows {
+const int MAX_IMAGE_WIDTH = 300;
+
+cv::Mat resize_image(cv::Mat image) {
+    if (image.cols > MAX_IMAGE_WIDTH) {
+        cv::Mat output;
+        int height = image.rows * MAX_IMAGE_WIDTH / image.cols;
+        cv::resize(image, output, {MAX_IMAGE_WIDTH, height});
+
+        return output;
+    } else {
+        return image;
+    }
+}
+
+struct Windows {
     cv::Mat focus;
     std::vector<cv::Mat> context;
 };
@@ -60,7 +73,7 @@ class ScalesGenerator {
     }
 
   public:
-    ScalesGenerator(cv::Mat &image) {
+    ScalesGenerator(cv::Mat image) {
         this->pyramid.push_back(image);
         for (int i = 0; i < SCALES_COUNT - 1; i++) {
             cv::Mat scaled_image;
@@ -70,7 +83,7 @@ class ScalesGenerator {
         }
     }
 
-    PixelWindows extract_window_scales_for_pixel(cv::Point point) {
+    Windows extract_window_scales_for_pixel(cv::Point point) {
         // std::cout << point << std::endl;
 
         const auto FOCUS_WIN_SIZE = cv::Point(FOCUS_WIN_SIDE, FOCUS_WIN_SIDE);
@@ -329,70 +342,72 @@ void prepare_dataset(std::vector<std::string> arguments) {
     sample_images_without_sea(params);
 }
 
-void segment(std::vector<std::string> arguments) {
-    if (arguments.size() < 3 || arguments.size() > 4) {
+void prepare_image(std::vector<std::string> arguments) {
+    if (arguments.size() != 2) {
         std::cout << SEGMENT_HELP_MESSAGE;
         return;
     }
 
-    auto model_file = arguments[0];
-    auto image_file = arguments[1];
-    auto segmentation_file = arguments[2];
-    bool should_display = false;
-    if (arguments.size() == 4) {
-        if (arguments[3] == "--display") {
-            should_display = true;
-        } else {
-            std::cout << SEGMENT_HELP_MESSAGE;
-            return;
-        }
-    }
-
-    auto model = fdeep::load_model(model_file);
+    auto image_file = arguments[0];
+    auto output_dir = arguments[1];
 
     auto image = cv::imread(image_file);
-    image.convertTo(image, CV_32FC3);
+    image = resize_image(image);
+
+    std::filesystem::create_directories(output_dir);
+
+    auto dimensions_file = std::ofstream(output_dir + "/dimensions.txt");
+    dimensions_file << image.cols << std::endl << image.rows << std::endl;
+    dimensions_file.close();
 
     auto generator = ScalesGenerator(image);
 
-    const auto FOCUS_WIN_SHAPE = fdeep::tensor_shape(FOCUS_WIN_SIDE, FOCUS_WIN_SIDE, 3);
-    const auto CONTEXT_WIN_SHAPE = fdeep::tensor_shape(CONTEXT_WIN_SIDE, CONTEXT_WIN_SIDE, 3);
-
-    auto predicted_segmentation = (cv::Mat)cv::Mat::zeros(image.rows, image.cols, CV_8UC1);
     for (int y = 0; y < image.rows; y++) {
+        std::cout << "Progress: " << y * 100 / image.rows << "%" << std::endl;
+
         for (int x = 0; x < image.cols; x++) {
-            std::cout << "Segmentation progress: "
-                      << (float)(y * image.cols + x) * 100 / (image.rows * image.cols) << "%"
-                      << std::endl;
+            auto base_path = output_dir + "/" + std::to_string(y * image.cols + x);
 
             auto [focus, context] = generator.extract_window_scales_for_pixel({x, y});
 
-            // Note: `Mat`s returned by `ScalesGenerator::extract_window_scales_for_pixel()` do not
-            // have contiguous memory, so `Mat::datastart` and `Mat::dataend` cannot be used.
+            cv::imwrite(base_path + "_focus.png", focus);
 
-            auto tensors = std::vector<fdeep::tensor>();
-            tensors.push_back(
-                fdeep::tensor(FOCUS_WIN_SHAPE, non_contiguous_mat_to_float_vector(focus)));
-            for (auto &win : context) {
-                tensors.push_back(
-                    fdeep::tensor(CONTEXT_WIN_SHAPE, non_contiguous_mat_to_float_vector(win)));
-            }
-
-            float result = model.predict_single_output(tensors);
-
-            if (result > 0.5) {
-                predicted_segmentation.at<uchar>(y, x) = 255;
+            for (int i = 0; i < SCALES_COUNT; i++) {
+                cv::imwrite(base_path + "_context_" + std::to_string(i) + ".png", context[i]);
             }
         }
     }
+}
 
-    if (should_display) {
-        auto display_image = (cv::Mat)(image * 0.3 + predicted_segmentation * 0.7);
-
-        cv::imshow("Sea segmentation", display_image);
+void show_segmentation(std::vector<std::string> arguments) {
+    if (arguments.size() != 1) {
+        std::cout << SEGMENT_HELP_MESSAGE;
+        return;
     }
 
-    cv::imwrite(segmentation_file, predicted_segmentation);
+    auto segmentation_dir = arguments[0];
+
+    auto dimensions_file = std::ifstream(segmentation_dir + "/dimensions.txt");
+    int width, height;
+    dimensions_file >> width >> height;
+
+    auto pixels_count = width * height;
+
+    auto segmentation_file =
+        std::ifstream(segmentation_dir + "/segmentation", std::ios_base::binary);
+    auto buffer = std::vector<float>(pixels_count);
+    segmentation_file.read((char *)&buffer[0], pixels_count * 4);
+
+    auto image = cv::Mat(height, width, CV_32FC1, &buffer[0]);
+
+    cv::imshow("segmentation", image);
+    cv::waitKey();
+
+    cv::threshold(image, image, 0.5, 1, cv::THRESH_BINARY);
+
+    cv::imshow("segmentation", image);
+    cv::waitKey();
+
 }
 
 } // namespace sea_segmentation
