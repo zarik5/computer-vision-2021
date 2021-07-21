@@ -34,11 +34,9 @@ private:
   void loadImages(cv::String images_folder,
                   cv::String ground_truth_folder,
                   std::vector<cv::Mat> &training_images,
-                  std::vector<std::vector<cv::Rect>> &positive_labels);
+                  std::vector<std::vector<cv::Rect>> &positive_labels, cv::Mat &training_HOGs);
                   
-  void positiveExtraction(std::vector<cv::Mat> training_images,
-                          std::vector<std::vector<cv::Rect>> positive_rects,
-                          cv::Mat &training_HOGs);
+
 
   void randomNegatives(std::vector<cv::Mat> training_images,
                        std::vector<std::vector<cv::Rect>> positive_rects,
@@ -47,7 +45,7 @@ private:
   void mineNegatives(cv::Mat training_image,
                      std::vector<cv::Rect> gound_truths,
                      std::vector<cv::Rect> found_boats,
-                     cv::Mat &training_HOGs);
+                     cv::Mat &training_HOGs,float threshold_IoU_step);
   void SVM_to_HOG_converter(cv::Ptr<cv::ml::SVM> SVM);
 
   float threshold_IoU = 0.1;
