@@ -342,14 +342,24 @@ void prepare_dataset(std::vector<std::string> arguments) {
     sample_images_without_sea(params);
 }
 
-void prepare_image(std::vector<std::string> arguments) {
-    if (arguments.size() != 2) {
-        std::cout << SEGMENT_HELP_MESSAGE;
-        return;
-    }
+void segment_image(std::vector<std::string> arguments) {
+    // if (arguments.size() != 2) {
+    //     std::cout << SEGMENT_HELP_MESSAGE;
+    //     return;
+    // }
 
-    auto image_file = arguments[0];
-    auto output_dir = arguments[1];
+    // auto image_file = arguments[0];
+    // auto target_segmentation_file = arguments[1];
+    // auto output_dir = arguments[2];
+    auto model_file = "../out/model.pb";
+    auto image_file = "../data/Kaggle_ships/aida-ship-driving-cruise-ship-sea-144796.jpg";
+    auto target_segmentation_file =
+        "../data/Kaggle_ships/aida-ship-driving-cruise-ship-sea-144796.jpg";
+    auto output_dir = std::string("../out");
+
+    auto fdjksf = cv::dnn::readNet(model_file);
+
+    std::exit(0);
 
     auto image = cv::imread(image_file);
     image = resize_image(image);
@@ -407,7 +417,6 @@ void show_segmentation(std::vector<std::string> arguments) {
 
     cv::imshow("segmentation", image);
     cv::waitKey();
-
 }
 
 } // namespace sea_segmentation

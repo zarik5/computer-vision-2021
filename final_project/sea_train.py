@@ -1,8 +1,12 @@
 import os
 import sys
 import numpy as np
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, preprocessing as preproc
+from tensorflow.python.framework.convert_to_constants import (
+    convert_variables_to_constants_v2,
+)
 
 # Parameters
 FOCUS_INPUT_SHAPE = (9, 9, 3)
@@ -144,13 +148,27 @@ def model():
     return model
 
 
+def save_tensorflow_model(keras_model, dir, file_name):
+    converted_model = tf.function(lambda x: keras_model(x))
+    converted_model = converted_model.get_concrete_function(
+        x=[tf.TensorSpec(inp.shape, tf.float32) for inp in keras_model.inputs]
+    )
+
+    frozen_func = convert_variables_to_constants_v2(converted_model)
+    frozen_func.graph.as_graph_def()
+
+    tf.io.write_graph(frozen_func.graph, dir, name=file_name, as_text=False)
+
+
 def train():
     if len(sys.argv) != 3:
         print(HELP_MESSAGE)
         return
 
-    dataset_dir = sys.argv[1]
-    model_path = sys.argv[2]
+    # dataset_dir = sys.argv[1]
+    # model_path = sys.argv[2]
+    dataset_dir = "out"
+    model_path = "out"
 
     print("\nCompiling model...")
     compiled_model = model()
@@ -170,7 +188,7 @@ def train():
     print("\nLoss:", score[0])
     print("Accuracy:", score[1])
 
-    compiled_model.save(model_path, include_optimizer=False)
+    save_tensorflow_model(compiled_model, model_path, "model.pb")
 
 
 def classify():
@@ -190,7 +208,7 @@ def classify():
     index = 0
     while index < pixels_total:
         print("Progress:", int(index * 100 / pixels_total), "%")
-        
+
         batch_size = min(BATCH_SIZE, pixels_total - index)
 
         input_batch = get_input_batch("out/00", range(index, index + batch_size))
@@ -202,4 +220,4 @@ def classify():
 
 
 if __name__ == "__main__":
-    classify()
+    train()
