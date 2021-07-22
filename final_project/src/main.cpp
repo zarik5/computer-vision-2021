@@ -10,7 +10,7 @@ final_project: detect boats or segment the sea in an image
 USAGE:
 final_project <step> [<step args>]
 
-STEPS: boat_train | boat_detect | sea_prep_data | sea_segment
+STEPS: boat_train | boat_detect | sea_train | sea_segment
 You can read help messages for each step by typing `<executable> <step>`.
 
 )help";
@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
             boat_detection::train(arguments);
         } else if (step == "boat_detect") {
             boat_detection::detect(arguments);
-        } else if (step == "sea_prep_data") {
-            sea_segmentation::prepare_dataset(arguments);
+        } else if (step == "sea_train") {
+            sea_segmentation::train(arguments);
         } else if (step == "sea_segment") {
             sea_segmentation::segment_image(arguments);
         } else {

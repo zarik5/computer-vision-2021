@@ -8,20 +8,7 @@ from tensorflow.python.framework.convert_to_constants import (
     convert_variables_to_constants_v2,
 )
 
-# Parameters
-FOCUS_INPUT_SHAPE = (9, 9, 3)
-CONTEXT_INPUT_SHAPE = (32, 32, 3)
-CONTEXT_LEVELS_COUNT = 4
-
 BATCH_SIZE = 128
-
-HELP_MESSAGE = """
-sea_train.py: Train a model to classify the central pixel of windows of pixels as sea or non-sea.
-
-USAGE:
-python sea_segmentation.py <in_dataset_dir> <out_model_path>
-
-"""
 
 
 def load_images_tensor(names):
@@ -40,34 +27,40 @@ def load_images_tensor(names):
     return np.stack(tensors) / 255
 
 
-def get_input_batch(dir, file_name_prefixes):
-    inputs = []
-
-    inputs.append(
-        load_images_tensor(
-            [f"{dir}/{prefix}_focus.png" for prefix in file_name_prefixes]
-        )
-    )
-
-    for i in range(CONTEXT_LEVELS_COUNT):
-        inputs.append(
-            load_images_tensor(
-                [f"{dir}/{prefix}_context_{i}.png" for prefix in file_name_prefixes]
-            )
-        )
-
-    return inputs
-
-
 class Dataset(keras.utils.Sequence):
-    def __init__(self, dataset_dir):
+    def __init__(self, dataset_dir, context_levels_count):
         classes_file = open(dataset_dir + "/classes.txt", "r")
         lines = classes_file.readlines()
         self.dataset_dir = dataset_dir
         self.names_and_classes = [l.split() for l in lines]
+        self.context_levels_count = context_levels_count
 
     def __len__(self):
         return int(len(self.names_and_classes) / BATCH_SIZE)
+
+    def get_input_batch(self, file_name_prefixes):
+        inputs = []
+
+        inputs.append(
+            load_images_tensor(
+                [
+                    f"{self.dataset_dir}/{prefix}_focus.png"
+                    for prefix in file_name_prefixes
+                ]
+            )
+        )
+
+        for i in range(self.context_levels_count):
+            inputs.append(
+                load_images_tensor(
+                    [
+                        f"{self.dataset_dir}/{prefix}_context_{i}.png"
+                        for prefix in file_name_prefixes
+                    ]
+                )
+            )
+
+        return inputs
 
     def __getitem__(self, idx):
         # At the beginning of an epoch, shuffle the entries. Keras can already do this between
@@ -79,17 +72,19 @@ class Dataset(keras.utils.Sequence):
         names = [pair[0] for pair in pairs]
         classes = [pair[1] for pair in pairs]
 
-        inputs = get_input_batch(self.dataset_dir, names)
+        inputs = self.get_input_batch(names)
         outputs = np.array(classes).astype(np.float)
 
         return (inputs, outputs)
 
 
-def model():
+def model(focus_input_shape, context_input_shape, context_levels_count):
     inputs = []
 
     # Process the small window around the pixel to be classified. No max-pooling should be used.
-    focus_input = keras.Input(shape=(9, 9, 3), dtype="float32", name="focus_input")
+    focus_input = keras.Input(
+        shape=focus_input_shape, dtype="float32", name="focus_input"
+    )
     inputs.append(focus_input)
 
     focus_features = layers.Conv2D(32, 3, activation="relu")(focus_input)
@@ -101,7 +96,7 @@ def model():
 
     # Create a reusable pipeline for context recognition at multiple scales. Weights will be shared.
     # Input: 32x32x3, Output: 4x4x3
-    context_input = keras.Input(shape=CONTEXT_INPUT_SHAPE, name=f"context_input")
+    context_input = keras.Input(shape=context_input_shape, name=f"context_input")
     context_features = layers.Conv2D(16, 3, activation="relu")(context_input)
     context_features = layers.MaxPooling2D(pool_size=(2, 2))(context_features)
     context_features = layers.Conv2D(32, 3, activation="relu")(context_features)
@@ -118,9 +113,9 @@ def model():
 
     # Apply the context pipeline for input windows at multiple scales
     context_outputs = []
-    for i in range(CONTEXT_LEVELS_COUNT):
+    for i in range(context_levels_count):
         context_input = keras.Input(
-            shape=CONTEXT_INPUT_SHAPE, dtype="float32", name=f"context_input{i}"
+            shape=context_input_shape, dtype="float32", name=f"context_input{i}"
         )
         inputs.append(context_input)
 
@@ -161,17 +156,16 @@ def save_tensorflow_model(keras_model, dir, file_name):
 
 
 def train():
-    if len(sys.argv) != 3:
-        print(HELP_MESSAGE)
-        return
-
-    # dataset_dir = sys.argv[1]
-    # model_path = sys.argv[2]
-    dataset_dir = "out"
-    model_path = "out"
+    focus_side = sys.argv[1]
+    focus_input_shape = (focus_side, focus_side, 3)
+    context_side = sys.argv[2]
+    context_input_shape = (context_side, context_side, 3)
+    context_levels_count = sys.argv[3]
+    dataset_dir = sys.argv[4]
+    model_dir = sys.argv[5]
 
     print("\nCompiling model...")
-    compiled_model = model()
+    compiled_model = model(focus_input_shape, context_input_shape, context_levels_count)
 
     print("\nIndexing dataset...")
     train_dataset = Dataset(dataset_dir + "/train")
@@ -188,35 +182,7 @@ def train():
     print("\nLoss:", score[0])
     print("Accuracy:", score[1])
 
-    save_tensorflow_model(compiled_model, model_path, "model.pb")
-
-
-def classify():
-    # if len(sys.argv) != 3:
-    #     print(HELP_MESSAGE)
-    #     return
-
-    model = keras.models.load_model("out/model.h5")
-
-    dimensions_file = open("out/00/dimensions.txt", "r")
-    image_shape = np.array(dimensions_file.readlines(), dtype="int")
-
-    pixels_total = image_shape[0] * image_shape[1]
-
-    segmentation_file = open("out/00/segmentation", "wb")
-
-    index = 0
-    while index < pixels_total:
-        print("Progress:", int(index * 100 / pixels_total), "%")
-
-        batch_size = min(BATCH_SIZE, pixels_total - index)
-
-        input_batch = get_input_batch("out/00", range(index, index + batch_size))
-
-        batch_prediction = model.predict(input_batch)
-        segmentation_file.write(batch_prediction.tobytes())
-
-        index += batch_size
+    save_tensorflow_model(compiled_model, model_dir, "model.pb")
 
 
 if __name__ == "__main__":

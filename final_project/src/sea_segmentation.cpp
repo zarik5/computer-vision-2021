@@ -7,22 +7,30 @@
 #include <opencv2/opencv.hpp>
 #include <random>
 
-const float TRAIN_SPLIT_PROPORTION = 0.9;
+namespace fs = std::filesystem;
+
+// For computing the final CNN model, the train split is set to contain almost all dataset images
+const float TRAIN_SPLIT_PROPORTION = 0.95;
 
 const int FOCUS_WIN_SIDE = 9;
-const int SCALES_COUNT = 4;
 const int CONTEXT_WIN_SIDE = 32;
+const int CONTEXT_LEVELS_COUNT = 4;
 
+// Pixel values for the classes in the ADE20K dataset
 const int WATER_CLASS = 22;
 const int SEA_CLASS = 27;
 
+// controls the size of the dataset for the classifier
 const int SAMPLES_PER_REGION = 10;
 
+// images are reduced to this size for performcance purpose
+const int MAX_IMAGE_WIDTH = 300;
+
 const std::string PREPROC_HELP_MESSAGE = R"help(
-sea_prep_data: Extract square windows of pixels and their class (sea or non-sea)
+sea_train: Extract square windows of pixels and their class (sea or non-sea), then train a classifier
 
 USAGE:
-final_project sea_prep_data <in_dataset_dir> <out_dir>
+final_project sea_train <dataset_dir> <out_dir>
 Note: the dataset must be ADE20K Outdoors.
 )help";
 
@@ -30,13 +38,8 @@ const std::string SEGMENT_HELP_MESSAGE = R"help(
 sea_segment: Segment the sea from an image
 
 USAGE:
-final_project sea_segment <in_model_file> <in_image_file> <out_segmentation_file> [--display]
-
-FLAG:
-display: Show the segmentation result in a window before closing the program
+final_project sea_segment <model> <in_image> <out_dir> <target_segmentation>
 )help";
-
-const int MAX_IMAGE_WIDTH = 300;
 
 cv::Mat resize_image(cv::Mat image) {
     if (image.cols > MAX_IMAGE_WIDTH) {
@@ -75,7 +78,7 @@ class ScalesGenerator {
   public:
     ScalesGenerator(cv::Mat image) {
         this->pyramid.push_back(image);
-        for (int i = 0; i < SCALES_COUNT - 1; i++) {
+        for (int i = 0; i < CONTEXT_LEVELS_COUNT - 1; i++) {
             cv::Mat scaled_image;
             cv::pyrDown(image, scaled_image);
             this->pyramid.push_back(scaled_image);
@@ -93,7 +96,7 @@ class ScalesGenerator {
         auto focus_window = this->get_region(this->pyramid[0], focus_roi);
 
         auto context_windows = std::vector<cv::Mat>();
-        for (int i = 0; i < SCALES_COUNT; i++) {
+        for (int i = 0; i < CONTEXT_LEVELS_COUNT; i++) {
             auto context_roi =
                 cv::Rect(point / std::pow(2, i) - CONTEXT_WIN_SIZE / 2, cv::Size(CONTEXT_WIN_SIZE));
             context_windows.push_back(this->get_region(this->pyramid[i], context_roi));
@@ -108,9 +111,9 @@ struct DatasetClassSplit {
     std::vector<std::string> without_sea_names;
 };
 
-static DatasetClassSplit split_dataset_by_class(std::string dataset_dir) {
+static DatasetClassSplit split_dataset_by_class(fs::path dataset_dir) {
     std::vector<std::string> annotations_paths;
-    cv::glob(dataset_dir + "/annotations/training/*.png", annotations_paths);
+    cv::glob(dataset_dir / "annotations/training/*.png", annotations_paths);
 
     auto split = DatasetClassSplit();
     for (auto &path : annotations_paths) {
@@ -144,25 +147,25 @@ static DatasetClassSplit split_dataset_by_class(std::string dataset_dir) {
     return split;
 }
 
-static std::string extract_windows_and_save(ScalesGenerator &generator, std::string &out_dir,
+static std::string extract_windows_and_save(ScalesGenerator &generator, fs::path &out_dir,
                                             std::string &image_name, cv::Point point,
                                             int point_index) {
     auto [focus, context] = generator.extract_window_scales_for_pixel(point);
 
     auto sample_name = image_name + "_" + std::to_string(point_index);
-    auto path_prefix = out_dir + "/" + sample_name + "_";
+    auto path_prefix = (out_dir / sample_name).string();
 
-    cv::imwrite(path_prefix + "focus.png", focus);
+    cv::imwrite(path_prefix + "_focus.png", focus);
     for (int i = 0; i < context.size(); i++) {
-        cv::imwrite(path_prefix + "context_" + std::to_string(i) + ".png", context[i]);
+        cv::imwrite(path_prefix + "_context_" + std::to_string(i) + ".png", context[i]);
     }
 
     return sample_name;
 }
 
 struct SamplingParams {
-    std::string dataset_dir;
-    std::string out_dir;
+    fs::path dataset_dir;
+    fs::path out_dir;
     DatasetClassSplit names;
     std::ofstream train_classes_file;
     std::ofstream test_classes_file;
@@ -184,7 +187,7 @@ static void sample_images_with_sea(SamplingParams &params) {
 
         auto name = with_sea_names[i];
 
-        auto annot = cv::imread(dataset_dir + "/annotations/training/" + name + ".png",
+        auto annot = cv::imread(dataset_dir / "annotations/training" / (name + ".png"),
                                 cv::IMREAD_GRAYSCALE);
 
         // Find sea, edge and non-sea pixels locations. Edge points refers to pixels near the edge
@@ -223,7 +226,7 @@ static void sample_images_with_sea(SamplingParams &params) {
             }
         }
 
-        auto image = cv::imread(dataset_dir + "/images/training/" + name + ".jpg");
+        auto image = cv::imread(dataset_dir / "images/training" / (name + ".jpg"));
         auto generator = ScalesGenerator(image);
 
         auto sampled_sea_points = std::vector<cv::Point>();
@@ -240,7 +243,7 @@ static void sample_images_with_sea(SamplingParams &params) {
                     std::back_inserter(sampled_non_sea_points), SAMPLES_PER_REGION / 2,
                     random_engine);
 
-        auto out_dir_for_split = out_dir + (i < train_count ? "/train" : "/test");
+        auto out_dir_for_split = out_dir / (i < train_count ? "train" : "test");
         auto &classes_file = (i < train_count ? train_classes_file : test_classes_file);
 
         int index = 0;
@@ -279,10 +282,10 @@ static void sample_images_without_sea(SamplingParams &params) {
 
         auto name = without_sea_names[i];
 
-        auto image = cv::imread(dataset_dir + "/images/training/" + name + ".jpg");
+        auto image = cv::imread(dataset_dir / "images/training" / (name + ".jpg"));
         auto generator = ScalesGenerator(image);
 
-        auto out_dir_for_split = out_dir + (i < train_count ? "/train" : "/test");
+        auto out_dir_for_split = out_dir / (i < train_count ? "train" : "test");
         auto &classes_file = (i < train_count ? train_classes_file : test_classes_file);
 
         int index = 0;
@@ -309,27 +312,19 @@ static std::vector<float> non_contiguous_mat_to_float_vector(cv::Mat mat) {
     return data;
 }
 
-namespace sea_segmentation {
-void prepare_dataset(std::vector<std::string> arguments) {
-    if (arguments.size() != 2) {
-        std::cout << PREPROC_HELP_MESSAGE;
-        return;
-    }
-
-    auto dataset_dir = arguments[0];
-    auto out_dir = arguments[1];
-
-    std::filesystem::create_directories(out_dir + "/train");
-    std::filesystem::create_directories(out_dir + "/test");
+// Divide dataset into small windows of pixels used for training a classifier
+static void prepare_dataset(fs::path dataset_dir, fs::path out_dir) {
+    std::filesystem::create_directories(out_dir / "train");
+    std::filesystem::create_directories(out_dir / "test");
 
     std::cout << "Find which images have a \"sea\" or \"water\" class..." << std::endl;
     auto names = split_dataset_by_class(dataset_dir);
 
     auto train_classes_file = std::ofstream();
-    train_classes_file.open(out_dir + "/train/classes.txt");
+    train_classes_file.open(out_dir / "train/classes.txt");
 
     auto test_classes_file = std::ofstream();
-    test_classes_file.open(out_dir + "/test/classes.txt");
+    test_classes_file.open(out_dir / "test/classes.txt");
 
     SamplingParams params = {dataset_dir, out_dir, names, std::move(train_classes_file),
                              std::move(test_classes_file)};
@@ -342,81 +337,88 @@ void prepare_dataset(std::vector<std::string> arguments) {
     sample_images_without_sea(params);
 }
 
+namespace sea_segmentation {
+void train(std::vector<std::string> arguments) {
+    if (arguments.size() != 2) {
+        std::cout << PREPROC_HELP_MESSAGE;
+        return;
+    }
+
+    auto dataset_dir = fs::path(arguments[0]);
+    auto out_dir = fs::path(arguments[1]);
+
+    prepare_dataset(dataset_dir, out_dir);
+
+    // Invoke Python script for the training
+    auto command = std::ostringstream();
+    command << "python ../sea_train.py " << FOCUS_WIN_SIDE << " " << CONTEXT_WIN_SIDE << " "
+            << CONTEXT_LEVELS_COUNT << " " << dataset_dir << " " << out_dir;
+    system(command.str().c_str());
+}
+
 void segment_image(std::vector<std::string> arguments) {
-    // if (arguments.size() != 2) {
-    //     std::cout << SEGMENT_HELP_MESSAGE;
-    //     return;
-    // }
+    if (arguments.size() != 4) {
+        std::cout << SEGMENT_HELP_MESSAGE;
+        return;
+    }
 
-    // auto image_file = arguments[0];
-    // auto target_segmentation_file = arguments[1];
-    // auto output_dir = arguments[2];
-    auto model_file = "../out/model.pb";
-    auto image_file = "../data/Kaggle_ships/aida-ship-driving-cruise-ship-sea-144796.jpg";
-    auto target_segmentation_file =
-        "../data/Kaggle_ships/aida-ship-driving-cruise-ship-sea-144796.jpg";
-    auto output_dir = std::string("../out");
+    auto model_path = fs::path(arguments[0]);
+    auto image_path = fs::path(arguments[1]);
+    auto out_dir = fs::path(arguments[2]);
+    auto target_segmentation_path = fs::path(arguments[3]);
 
-    auto fdjksf = cv::dnn::readNet(model_file);
+    fs::create_directories(out_dir);
 
-    std::exit(0);
+    auto model = cv::dnn::readNet(model_path);
 
-    auto image = cv::imread(image_file);
+    auto image = cv::imread(image_path);
+    cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
     image = resize_image(image);
 
-    std::filesystem::create_directories(output_dir);
-
-    auto dimensions_file = std::ofstream(output_dir + "/dimensions.txt");
+    auto dimensions_file = std::ofstream(out_dir / "dimensions.txt");
     dimensions_file << image.cols << std::endl << image.rows << std::endl;
     dimensions_file.close();
 
     auto generator = ScalesGenerator(image);
 
+    auto segmentation = cv::Mat(image.rows, image.cols, CV_32F);
+
     for (int y = 0; y < image.rows; y++) {
         std::cout << "Progress: " << y * 100 / image.rows << "%" << std::endl;
 
         for (int x = 0; x < image.cols; x++) {
-            auto base_path = output_dir + "/" + std::to_string(y * image.cols + x);
-
             auto [focus, context] = generator.extract_window_scales_for_pixel({x, y});
 
-            cv::imwrite(base_path + "_focus.png", focus);
-
-            for (int i = 0; i < SCALES_COUNT; i++) {
-                cv::imwrite(base_path + "_context_" + std::to_string(i) + ".png", context[i]);
+            model.setInput(cv::dnn::blobFromImage(focus), "x");
+            for (int i = 0; i < CONTEXT_LEVELS_COUNT; i++) {
+                model.setInput(cv::dnn::blobFromImage(context[i]), "x_" + std::to_string(i + 1));
             }
+
+            segmentation.at<float>(y, x) = model.forward().at<float>(0);
         }
     }
-}
 
-void show_segmentation(std::vector<std::string> arguments) {
-    if (arguments.size() != 1) {
-        std::cout << SEGMENT_HELP_MESSAGE;
-        return;
-    }
+    cv::imshow("segmentation", segmentation);
 
-    auto segmentation_dir = arguments[0];
+    auto target_segmentation = cv::imread(target_segmentation_path, cv::IMREAD_GRAYSCALE);
+    target_segmentation = resize_image(target_segmentation);
+    target_segmentation.convertTo(target_segmentation, CV_32F);
 
-    auto dimensions_file = std::ifstream(segmentation_dir + "/dimensions.txt");
-    int width, height;
-    dimensions_file >> width >> height;
+    auto pixel_accuracy = cv::sum(1 - cv::abs(segmentation - target_segmentation) /
+                                          ((float)image.rows * image.cols));
 
-    auto pixels_count = width * height;
+    std::cout << "Pixel accuracy: " << pixel_accuracy[0] << std::endl;
 
-    auto segmentation_file =
-        std::ifstream(segmentation_dir + "/segmentation", std::ios_base::binary);
-    auto buffer = std::vector<float>(pixels_count);
-    segmentation_file.read((char *)&buffer[0], pixels_count * 4);
+    auto channels = std::vector<cv::Mat>(
+        {target_segmentation, segmentation, cv::Mat::zeros(image.rows, image.cols, CV_32F)});
+    cv::Mat evaluation_image;
+    cv::merge(channels, evaluation_image);
 
-    auto image = cv::Mat(height, width, CV_32FC1, &buffer[0]);
-
-    cv::imshow("segmentation", image);
+    cv::imshow("evaluation", evaluation_image);
     cv::waitKey();
 
-    cv::threshold(image, image, 0.5, 1, cv::THRESH_BINARY);
-
-    cv::imshow("segmentation", image);
-    cv::waitKey();
+    cv::imwrite(out_dir / (image_path.stem().string() + "_segmentation.png"), segmentation);
+    cv::imwrite(out_dir / (image_path.stem().string() + "_evaluation.png"), evaluation_image);
 }
 
 } // namespace sea_segmentation
