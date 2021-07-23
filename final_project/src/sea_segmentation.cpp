@@ -24,7 +24,7 @@ const int SEA_CLASS = 27;
 const int SAMPLES_PER_REGION = 10;
 
 // images are reduced to this size for performcance purpose
-const int MAX_IMAGE_WIDTH = 400;
+const int MAX_IMAGE_WIDTH = 300;
 
 const std::string PREPROC_HELP_MESSAGE = R"help(
 sea_train: Extract square windows of pixels and their class (sea or non-sea), then train a classifier
