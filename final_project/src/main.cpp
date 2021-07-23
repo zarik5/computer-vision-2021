@@ -24,9 +24,11 @@ int main(int argc, char *argv[]) {
         }
 
         if (step == "boat_train") {
-            boat_detection::train(arguments);
+            boat_detection boatFinder;
+            boatFinder.train(arguments);
         } else if (step == "boat_detect") {
-            boat_detection::detect(arguments);
+            boat_detection boatFinder;
+            boatFinder.detect(arguments);
         } else if (step == "sea_train") {
             sea_segmentation::train(arguments);
         } else if (step == "sea_segment") {
