@@ -4,7 +4,11 @@
 #include <vector>
 
 namespace sea_segmentation {
-void prepare_dataset(std::vector<std::string> arguments);
-void prepare_image(std::vector<std::string> arguments);
-void show_segmentation(std::vector<std::string> arguments);
+
+// Divide dataset into small windows of pixels and train a classifier using Keras
+void train(std::vector<std::string> arguments);
+
+// Segment the sea in an image and compare the result with the provided ground truth
+void segment_image(std::vector<std::string> arguments);
+
 } // namespace sea_segmentation

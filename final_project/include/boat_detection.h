@@ -12,42 +12,32 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/ximgproc.hpp>
 #include <vector>
+#include <opencv2/dnn.hpp>
 
-class BoatDetector
+class boat_detection
 {
 
 public:
-  BoatDetector(cv::String HOG_xml_file);
-  BoatDetector();
-  void train(cv::String images_folder,
-             cv::String ground_truth_folder);
+  boat_detection();
+  void train(std::vector<std::string> arguments);
+  void detect(std::vector<std::string> arguments);
 
-  void save(cv::String HOG_xml_file);
-  void load(cv::String HOG_xml_file);
+  void load(cv::String Net_pb_file);
 
-  std::vector<cv::Rect> detectBoats(cv::Mat input_img);
-
-  std::vector<cv::Rect> NMS(std::vector<cv::Rect> ships,
-                            std::vector<double> probabilities);
+  void detectBoats(cv::Mat input_img, std::vector<cv::Rect> &found_boats, std::vector<float> &confidences);
+  void scores(std::vector<cv::Rect> gound_truths, std::vector<cv::Rect> found_boats, std::vector<float> &scores_ground_truth, std::vector<float> &scores_boats);
+  void loadGroundTruth(cv::String test_images_folder, cv::String ground_truth_folder, std::vector<cv::String> &images_names, std::vector<cv::Mat> &images_vector, std::vector<std::vector<cv::Rect>> &ground_truths);
+  void writeIoU(cv::String image_name, std::vector<float> scores_ground_truth, std::vector<float> scores_boats, std::vector<cv::Rect> boats_found);
 
 private:
-  void loadImages(cv::String images_folder,
-                  cv::String ground_truth_folder,
-                  std::vector<cv::Mat> &training_images,
-                  std::vector<std::vector<cv::Rect>> &positive_labels, cv::Mat &training_HOGs);
-                  
-
-
-  void randomNegatives(std::vector<cv::Mat> training_images,
-                       std::vector<std::vector<cv::Rect>> positive_rects,
-                       cv::Mat& training_HOGs);
-
-  void mineNegatives(cv::Mat training_image,
-                     std::vector<cv::Rect> gound_truths,
-                     std::vector<cv::Rect> found_boats,
-                     cv::Mat &training_HOGs,float threshold_IoU_step);
-  void SVM_to_HOG_converter(cv::Ptr<cv::ml::SVM> SVM);
-
+  float IoUCompute(cv::Rect rect1, cv::Rect rect2);
+  void proposalRegions(cv::Mat input_img, std::vector<cv::Rect> &proposedRegions);
+  void NMS(std::vector<cv::Rect> found_boats_net, std::vector<float> confidences_net, std::vector<cv::Rect> &found_boats, std::vector<float> &confidences);
+  void shiftSuppresion(cv::Mat input_img,std::vector<cv::Rect> found_boats_net, std::vector<float> confidences_net, std::vector<cv::Rect> &boats, std::vector<float> &confidences);
   float threshold_IoU = 0.1;
-  cv::Ptr<cv::HOGDescriptor> HOG_descriptor;
+  float threshold_confidence = 0.8;
+  int threshold_width = 15;
+  int threshold_height = 15;
+  float threshold_ratio = 0.1;
+  cv::dnn::Net net;
 };

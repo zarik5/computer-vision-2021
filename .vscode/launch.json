@@ -10,8 +10,11 @@
             "request": "launch",
             "program": "sea_train.py",
             "args": [
-                "./out",
-                "./out/model.h5"
+                "9",
+                "32",
+                "4",
+                "out",
+                "out"
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/final_project"

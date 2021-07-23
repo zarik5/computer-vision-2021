@@ -1,43 +1,44 @@
 #include <iostream>
 #include <vector>
 
-#include <boat_detection.h>
+#include "boat_detection.h"
+#include "sea_segmentation.h"
 
-int main(int argc, char *argv[])
-{
-    
+const std::string HELP_MESSAGE = R"help(
+final_project: detect boats or segment the sea in an image
 
-    if (std::strcmp(argv[1],"Training")==0)
-    {
-        BoatDetector boatFinder;
-        boatFinder.train(cv::String(argv[2]),cv::String( argv[3]));
-        boatFinder.save(".\\HOG_Params.xml");
-    }
-    else
-    {
-        BoatDetector boatFinder;
-        boatFinder.load(cv::String(argv[2]));
-        std::vector<cv::String> image_names;
-        cv::String ia = cv::String(argv[3]) + "\\*";
-        cv::glob(ia, image_names);
+USAGE:
+final_project <step> [<step args>]
 
-        for (cv::String image_name : image_names)
-        {
+STEPS: boat_train | boat_detect | sea_train | sea_segment
+You can read help messages for each step by typing `<executable> <step>`.
 
-            cv::Mat image = cv::imread(image_name,cv::IMREAD_GRAYSCALE);
-            std::vector<cv::Rect> ships_found = boatFinder.detectBoats(image);
+)help";
 
-            cv::RNG rng(time(0));
-            for (cv::Rect rect : ships_found)
-            {
-                cv::rectangle(image, rect, cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 3);
-            }
-
-            cv::imshow("Boats found: " + std::to_string(ships_found.size()), image);
-            cv::waitKey();
+int main(int argc, char *argv[]) {
+    if (argc >= 2) {
+        std::string step = argv[1];
+        std::vector<std::string> arguments;
+        for (int i = 2; i < argc; i++) {
+            arguments.push_back(argv[i]);
         }
+
+        if (step == "boat_train") {
+            boat_detection boatFinder;
+            boatFinder.train(arguments);
+        } else if (step == "boat_detect") {
+            boat_detection boatFinder;
+            boatFinder.detect(arguments);
+        } else if (step == "sea_train") {
+            sea_segmentation::train(arguments);
+        } else if (step == "sea_segment") {
+            sea_segmentation::segment_image(arguments);
+        } else {
+            std::cout << HELP_MESSAGE;
+        }
+    } else {
+        std::cout << HELP_MESSAGE;
     }
 
-    std::cout << std::endl
-              << "Done" << std::endl;
+    std::cout << std::endl << "Done" << std::endl;
 }
