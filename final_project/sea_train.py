@@ -156,11 +156,11 @@ def save_tensorflow_model(keras_model, dir, file_name):
 
 
 def train():
-    focus_side = sys.argv[1]
+    focus_side = int(sys.argv[1]) 
     focus_input_shape = (focus_side, focus_side, 3)
-    context_side = sys.argv[2]
+    context_side = int(sys.argv[2])
     context_input_shape = (context_side, context_side, 3)
-    context_levels_count = sys.argv[3]
+    context_levels_count = int(sys.argv[3])
     dataset_dir = sys.argv[4]
     model_dir = sys.argv[5]
 
@@ -168,8 +168,8 @@ def train():
     compiled_model = model(focus_input_shape, context_input_shape, context_levels_count)
 
     print("\nIndexing dataset...")
-    train_dataset = Dataset(dataset_dir + "/train")
-    test_dataset = Dataset(dataset_dir + "/test")
+    train_dataset = Dataset(dataset_dir + "/train", context_levels_count)
+    test_dataset = Dataset(dataset_dir + "/test", context_levels_count)
 
     compiled_model.fit(
         train_dataset,

@@ -24,7 +24,7 @@ const int SEA_CLASS = 27;
 const int SAMPLES_PER_REGION = 10;
 
 // images are reduced to this size for performcance purpose
-const int MAX_IMAGE_WIDTH = 300;
+const int MAX_IMAGE_WIDTH = 400;
 
 const std::string PREPROC_HELP_MESSAGE = R"help(
 sea_train: Extract square windows of pixels and their class (sea or non-sea), then train a classifier
@@ -53,6 +53,34 @@ cv::Mat resize_image(cv::Mat image) {
     }
 }
 
+cv::Mat get_biggest_blob_with_holes(cv::Mat image) {
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(image, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_NONE);
+
+    float biggest_area = 0;
+    std::vector<cv::Point> biggest_contour;
+    std::vector<std::vector<cv::Point>> other_contours;
+    for (int i = 0; i < contours.size(); i++) {
+        if (hierarchy[i][3] == -1) {
+            double area = cv::contourArea(contours[i], false);
+            if (area > biggest_area) {
+                biggest_area = area;
+                biggest_contour = contours[i];
+            }
+        } else {
+            other_contours.push_back(contours[i]);
+        }
+    }
+
+    auto biggest_contour_vec = std::vector<std::vector<cv::Point>>({biggest_contour});
+    cv::Mat output = cv::Mat::zeros(image.rows, image.cols, CV_8UC1);
+    cv::fillPoly(output, biggest_contour_vec, 255);
+    cv::fillPoly(output, other_contours, 0);
+
+    return output;
+}
+
 struct Windows {
     cv::Mat focus;
     std::vector<cv::Mat> context;
@@ -64,10 +92,9 @@ class ScalesGenerator {
 
     // Fill with 0s if `roi` goes outside `source` boundary.
     cv::Mat get_region(cv::Mat &source, cv::Rect roi) {
-        auto source_roi = cv::Rect({}, source.size());
+        auto source_roi = cv::Rect({0, 0}, source.size());
         auto intersection = source_roi & roi;
         auto offset_roi = intersection - roi.tl();
-        // std::cout << source.size() << "\n" << roi << "\n" << offset_roi << std::endl;
 
         auto out_region = (cv::Mat)cv::Mat::zeros(roi.size(), source.type());
         source(intersection).copyTo(out_region(offset_roi));
@@ -87,8 +114,6 @@ class ScalesGenerator {
     }
 
     Windows extract_window_scales_for_pixel(cv::Point point) {
-        // std::cout << point << std::endl;
-
         const auto FOCUS_WIN_SIZE = cv::Point(FOCUS_WIN_SIDE, FOCUS_WIN_SIDE);
         const auto CONTEXT_WIN_SIZE = cv::Point(CONTEXT_WIN_SIDE, CONTEXT_WIN_SIDE);
 
@@ -191,7 +216,7 @@ static void sample_images_with_sea(SamplingParams &params) {
                                 cv::IMREAD_GRAYSCALE);
 
         // Find sea, edge and non-sea pixels locations. Edge points refers to pixels near the edge
-        // between sea and non-sea classes.
+        // between sea and non-sea regions.
 
         cv::Mat sea_mask;
         cv::inRange(annot, SEA_CLASS, SEA_CLASS, sea_mask);
@@ -351,7 +376,7 @@ void train(std::vector<std::string> arguments) {
 
     // Invoke Python script for the training
     auto command = std::ostringstream();
-    command << "python ../sea_train.py " << FOCUS_WIN_SIDE << " " << CONTEXT_WIN_SIDE << " "
+    command << "python3 ../sea_train.py " << FOCUS_WIN_SIDE << " " << CONTEXT_WIN_SIDE << " "
             << CONTEXT_LEVELS_COUNT << " " << dataset_dir << " " << out_dir;
     system(command.str().c_str());
 }
@@ -373,11 +398,8 @@ void segment_image(std::vector<std::string> arguments) {
 
     auto image = cv::imread(image_path);
     cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+    image.convertTo(image, CV_32FC3, 1.0 / 255);
     image = resize_image(image);
-
-    auto dimensions_file = std::ofstream(out_dir / "dimensions.txt");
-    dimensions_file << image.cols << std::endl << image.rows << std::endl;
-    dimensions_file.close();
 
     auto generator = ScalesGenerator(image);
 
@@ -398,19 +420,30 @@ void segment_image(std::vector<std::string> arguments) {
         }
     }
 
+    cv::imshow("segmentation raw", segmentation);
+
+    cv::threshold(segmentation, segmentation, 0.5, 1, cv::THRESH_BINARY);
+
+    segmentation = segmentation * 255;
+    segmentation.convertTo(segmentation, CV_8UC1);
+
+    auto kernel = cv::getStructuringElement(cv::MORPH_RECT, {5, 5});
+    cv::erode(segmentation, segmentation, kernel);
+    segmentation = get_biggest_blob_with_holes(segmentation);
+    cv::dilate(segmentation, segmentation, kernel);
+
     cv::imshow("segmentation", segmentation);
 
     auto target_segmentation = cv::imread(target_segmentation_path, cv::IMREAD_GRAYSCALE);
     target_segmentation = resize_image(target_segmentation);
-    target_segmentation.convertTo(target_segmentation, CV_32F);
 
-    auto pixel_accuracy = cv::sum(1 - cv::abs(segmentation - target_segmentation) /
-                                          ((float)image.rows * image.cols));
+    auto pixel_accuracy = (1 - (float)cv::sum(cv::abs(target_segmentation - segmentation))[0] /
+                                   (image.rows * image.cols * 255));
 
-    std::cout << "Pixel accuracy: " << pixel_accuracy[0] << std::endl;
+    std::cout << "Pixel accuracy: " << pixel_accuracy << std::endl;
 
     auto channels = std::vector<cv::Mat>(
-        {target_segmentation, segmentation, cv::Mat::zeros(image.rows, image.cols, CV_32F)});
+        {cv::Mat::zeros(image.rows, image.cols, CV_8UC1), target_segmentation, segmentation});
     cv::Mat evaluation_image;
     cv::merge(channels, evaluation_image);
 
